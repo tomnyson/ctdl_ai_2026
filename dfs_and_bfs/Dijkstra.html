@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dijkstra Graph Visualizer</title>
+    <!-- Import Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Thêm một số CSS để tạo hiệu ứng mượt mà cho SVG */
+        svg * {
+            transition: all 0.3s ease-in-out;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-50%) translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+            50% { transform: translateY(-50%) translateY(0); animation-timing-function: cubic-bezier(0,0,0.2,1); }
+        }
+        .animate-bounce-custom {
+            animation: bounce 1s infinite;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center w-full min-h-screen bg-slate-50 font-sans pb-10">
+
+    <!-- Header & Controls -->
+    <header class="w-full bg-white shadow-sm border-b border-slate-200 py-4 px-6 mb-6">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Dijkstra: Mô phỏng Đồ thị</h1>
+                <p class="text-sm text-slate-500">Giúp sinh viên hiểu cách tính chi phí (Cost)</p>
+            </div>
+
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button id="btn-run" class="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-all bg-emerald-600 hover:bg-emerald-700 shadow-sm">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Chạy Dijkstra
+                </button>
+                <button id="btn-reset" class="flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all border bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                    Đặt lại
+                </button>
+                <button id="btn-random" class="flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all border bg-white text-indigo-600 border-slate-300 hover:bg-indigo-50 shadow-sm">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    Random trọng số
+                </button>
+                <!-- Thêm nút Xem Code Python -->
+                <button id="btn-show-code" class="flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all border bg-slate-800 text-white border-slate-700 hover:bg-slate-700 shadow-sm">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    Code Python
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Trạng thái thuật toán -->
+    <div class="w-full max-w-4xl mb-6 bg-indigo-50 border border-indigo-200 text-indigo-800 p-4 rounded-lg shadow-sm flex items-start gap-3 transition-all duration-300 min-h-[80px]">
+        <svg width="20" height="20" class="mt-0.5 text-indigo-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        <div>
+            <h3 class="font-semibold text-indigo-900 mb-1">Giáo viên giải thích:</h3>
+            <p id="status-msg" class="text-indigo-700 font-medium">Đang tải...</p>
+        </div>
+    </div>
+
+    <!-- Vùng vẽ đồ thị (SVG) -->
+    <div class="relative bg-[#f5f5f0] p-4 rounded-xl shadow-lg border border-slate-200 overflow-hidden" style="width: 750px; height: 500px;">
+        
+        <!-- Lưới nền cho giống ảnh gốc -->
+        <div class="absolute inset-0 opacity-20 pointer-events-none" 
+             style="background-image: linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px); background-size: 150px 150px; background-position: -75px -75px;">
+        </div>
+
+        <svg id="graph-svg" width="100%" height="100%" class="absolute inset-0"></svg>
+
+        <!-- Bảng hiển thị kết quả "Cost: X" -->
+        <div id="cost-badge" class="hidden absolute right-10 top-1/2 transform -translate-y-1/2 bg-[#f28b46] text-white font-bold text-2xl px-4 py-2 rounded shadow-md border-2 border-white animate-bounce-custom">
+            Cost: <span id="cost-value">0</span>
+        </div>
+    </div>
+
+    <!-- Ghi chú -->
+    <div class="max-w-4xl w-full mt-6 bg-white p-4 rounded-lg border border-slate-200 text-sm text-slate-600">
+        <h4 class="font-bold text-slate-800 mb-2">Ghi chú cho sinh viên:</h4>
+        <ul class="list-disc pl-5 space-y-1">
+            <li>Các số nằm nhỏ bên trên mỗi vòng tròn (node) là <strong>khoảng cách ngắn nhất hiện tại</strong> tính từ điểm A. Ban đầu tất cả đều là Vô cực (∞), riêng A là 0.</li>
+            <li>Dijkstra không quan tâm bạn đi qua bao nhiêu node, nó chỉ quan tâm <strong>tổng trọng số (cost) nhỏ nhất</strong>. Trong ví dụ, đi từ A-&gt;B-&gt;E qua 3 node tốn (4+3=7), trong khi đi từ A-&gt;D-&gt;E cũng 3 node nhưng chỉ tốn (1+2=3).</li>
+            <li>Nút <span class="font-semibold text-indigo-600">Random trọng số</span> giúp bạn tạo ra các bài toán mới để tự luyện tập.</li>
+        </ul>
+    </div>
+
+    <!-- Modal Code Python -->
+    <div id="code-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center bg-slate-800 text-white px-6 py-4">
+                <h3 class="font-bold text-lg flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    Mã nguồn Python - Thuật toán Dijkstra
+                </h3>
+                <button id="btn-close-code" class="text-slate-300 hover:text-white transition-colors">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto bg-slate-50 text-sm">
+                <p class="text-slate-600 mb-4">Đoạn code sử dụng <code class="bg-slate-200 px-1 py-0.5 rounded">heapq</code> (Priority Queue) để tối ưu thời gian tìm kiếm Node có khoảng cách nhỏ nhất, giúp thuật toán chạy nhanh hơn.</p>
+                <pre class="bg-slate-900 text-slate-50 p-4 rounded-lg overflow-x-auto font-mono text-[13px] leading-relaxed shadow-inner"><code><span class="text-rose-400">import</span> heapq
+
+<span class="text-rose-400">def</span> <span class="text-blue-400">dijkstra</span>(graph, start, target):
+    <span class="text-slate-400"># Khởi tạo khoảng cách ban đầu là vô cực, riêng điểm bắt đầu là 0</span>
+    distances = {node: <span class="text-blue-300">float</span>(<span class="text-green-300">'infinity'</span>) <span class="text-rose-400">for</span> node <span class="text-rose-400">in</span> graph}
+    distances[start] = <span class="text-orange-300">0</span>
+    
+    <span class="text-slate-400"># Lưu lại dấu vết để truy ngược đường đi</span>
+    previous_nodes = {node: <span class="text-orange-300">None</span> <span class="text-rose-400">for</span> node <span class="text-rose-400">in</span> graph}
+    
+    <span class="text-slate-400"># Hàng đợi ưu tiên (Priority Queue) lưu Tuple: (khoảng_cách, tên_node)</span>
+    pq = [(<span class="text-orange-300">0</span>, start)]
+    
+    <span class="text-rose-400">while</span> pq:
+        current_distance, current_node = heapq.heappop(pq)
+        
+        <span class="text-slate-400"># Nếu đã đến đích thì dừng thuật toán sớm</span>
+        <span class="text-rose-400">if</span> current_node == target:
+            <span class="text-rose-400">break</span>
+            
+        <span class="text-slate-400"># Bỏ qua nếu tìm thấy một khoảng cách lớn hơn khoảng cách hiện tại đã lưu</span>
+        <span class="text-rose-400">if</span> current_distance > distances[current_node]:
+            <span class="text-rose-400">continue</span>
+            
+        <span class="text-slate-400"># Duyệt qua các node kề</span>
+        <span class="text-rose-400">for</span> neighbor, weight <span class="text-rose-400">in</span> graph[current_node].items():
+            distance = current_distance + weight
+            
+            <span class="text-slate-400"># Cập nhật nếu tìm được đường đi ngắn hơn</span>
+            <span class="text-rose-400">if</span> distance < distances[neighbor]:
+                distances[neighbor] = distance
+                previous_nodes[neighbor] = current_node
+                heapq.heappush(pq, (distance, neighbor))
+                
+    <span class="text-slate-400"># Truy vết đường đi ngắn nhất</span>
+    path = []
+    current = target
+    <span class="text-rose-400">while</span> current <span class="text-rose-400">is not None</span>:
+        path.insert(<span class="text-orange-300">0</span>, current)
+        current = previous_nodes[current]
+        
+    <span class="text-rose-400">return</span> distances[target], path
+
+<span class="text-slate-400"># --- THỰC THI VỚI ĐỒ THỊ GIỐNG TRONG MÔ PHỎNG ---</span>
+graph = {
+    <span class="text-green-300">'A'</span>: {<span class="text-green-300">'D'</span>: <span class="text-orange-300">1</span>, <span class="text-green-300">'B'</span>: <span class="text-orange-300">4</span>},
+    <span class="text-green-300">'B'</span>: {<span class="text-green-300">'A'</span>: <span class="text-orange-300">4</span>, <span class="text-green-300">'C'</span>: <span class="text-orange-300">2</span>, <span class="text-green-300">'E'</span>: <span class="text-orange-300">3</span>},
+    <span class="text-green-300">'C'</span>: {<span class="text-green-300">'B'</span>: <span class="text-orange-300">2</span>, <span class="text-green-300">'F'</span>: <span class="text-orange-300">5</span>},
+    <span class="text-green-300">'D'</span>: {<span class="text-green-300">'A'</span>: <span class="text-orange-300">1</span>, <span class="text-green-300">'E'</span>: <span class="text-orange-300">2</span>},
+    <span class="text-green-300">'E'</span>: {<span class="text-green-300">'B'</span>: <span class="text-orange-300">3</span>, <span class="text-green-300">'D'</span>: <span class="text-orange-300">2</span>, <span class="text-green-300">'F'</span>: <span class="text-orange-300">1</span>},
+    <span class="text-green-300">'F'</span>: {<span class="text-green-300">'C'</span>: <span class="text-orange-300">5</span>, <span class="text-green-300">'E'</span>: <span class="text-orange-300">1</span>}
+}
+
+cost, path = dijkstra(graph, <span class="text-green-300">'A'</span>, <span class="text-green-300">'E'</span>)
+<span class="text-blue-300">print</span>(<span class="text-green-300">f"Chi phí thấp nhất: {cost}"</span>)
+<span class="text-blue-300">print</span>(<span class="text-green-300">f"Đường đi: {' -> '.join(path)}"</span>)</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DỮ LIỆU ĐỒ THỊ MẪU ---
+        const INITIAL_NODES = [
+            { id: 'A', x: 150, y: 100, label: 'A' },
+            { id: 'B', x: 300, y: 250, label: 'B' },
+            { id: 'C', x: 150, y: 400, label: 'C' },
+            { id: 'D', x: 450, y: 100, label: 'D' },
+            { id: 'E', x: 600, y: 250, label: 'E' },
+            { id: 'F', x: 450, y: 400, label: 'F' },
+        ];
+
+        const INITIAL_EDGES = [
+            { id: 'e1', source: 'A', target: 'D', weight: 1 },
+            { id: 'e2', source: 'A', target: 'B', weight: 4 },
+            { id: 'e3', source: 'B', target: 'C', weight: 2 },
+            { id: 'e4', source: 'C', target: 'F', weight: 5 },
+            { id: 'e5', source: 'B', target: 'E', weight: 3 },
+            { id: 'e6', source: 'D', target: 'E', weight: 2 },
+            { id: 'e7', source: 'F', target: 'E', weight: 1 },
+        ];
+
+        const START_NODE_ID = 'A';
+        const TARGET_NODE_ID = 'E';
+
+        // --- GLOBAL STATE ---
+        let state = {
+            nodes: [],
+            edges: JSON.parse(JSON.stringify(INITIAL_EDGES)),
+            isRunning: false,
+            isFinished: false,
+            statusMsg: "Sẵn sàng. Nhấn 'Chạy Dijkstra' để tìm đường ngắn nhất từ A đến E.",
+            visitedNodes: new Set(),
+            activeEdges: new Set(),
+            shortestPathEdges: new Set(),
+            shortestPathNodes: new Set(),
+            currentCost: null
+        };
+
+        // --- DOM ELEMENTS ---
+        const btnRun = document.getElementById('btn-run');
+        const btnReset = document.getElementById('btn-reset');
+        const btnRandom = document.getElementById('btn-random');
+        const statusMsgEl = document.getElementById('status-msg');
+        const svgEl = document.getElementById('graph-svg');
+        const costBadgeEl = document.getElementById('cost-badge');
+        const costValueEl = document.getElementById('cost-value');
+
+        // --- DOM ELEMENTS (MODAL CODE PYTHON) ---
+        const btnShowCode = document.getElementById('btn-show-code');
+        const btnCloseCode = document.getElementById('btn-close-code');
+        const codeModal = document.getElementById('code-modal');
+
+        // --- UTILS ---
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // --- RENDER FUNCTION ---
+        function render() {
+            // Cập nhật trạng thái nút
+            if (state.isRunning) {
+                btnRun.className = "flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-all bg-emerald-400 cursor-not-allowed";
+                btnReset.className = "flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all border bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed";
+                btnRandom.className = "flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all border bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed";
+            } else {
+                btnRun.className = "flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-all bg-emerald-600 hover:bg-emerald-700 shadow-sm";
+                btnReset.className = "flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all border bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm";
+                btnRandom.className = "flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all border bg-white text-indigo-600 border-slate-300 hover:bg-indigo-50 shadow-sm";
+            }
+            btnRun.disabled = state.isRunning;
+            btnReset.disabled = state.isRunning;
+            btnRandom.disabled = state.isRunning;
+
+            // Cập nhật trạng thái text
+            statusMsgEl.innerText = state.statusMsg;
+
+            // Cập nhật Badge kết quả
+            if (state.isFinished && state.currentCost !== null) {
+                costValueEl.innerText = state.currentCost;
+                costBadgeEl.classList.remove('hidden');
+            } else {
+                costBadgeEl.classList.add('hidden');
+            }
+
+            // Xây dựng SVG Content
+            let svgContent = '';
+
+            // Vẽ cạnh (Edges)
+            state.edges.forEach(edge => {
+                const source = state.nodes.find(n => n.id === edge.source);
+                const target = state.nodes.find(n => n.id === edge.target);
+                if (!source || !target) return;
+
+                const isShortestPath = state.shortestPathEdges.has(edge.id);
+                const isActive = state.activeEdges.has(edge.id);
+                
+                const midX = (source.x + target.x) / 2;
+                const midY = (source.y + target.y) / 2;
+                
+                const angle = Math.atan2(target.y - source.y, target.x - source.x);
+                const offsetX = Math.sin(angle) * 15;
+                const offsetY = -Math.cos(angle) * 15;
+
+                const strokeColor = isShortestPath ? "#f28b46" : isActive ? "#3b82f6" : "#c4c4c4";
+                const strokeWidth = isShortestPath ? 8 : isActive ? 6 : 3;
+                const textColor = isShortestPath ? "#f28b46" : isActive ? "#2563eb" : "#334155";
+
+                svgContent += `
+                    <g>
+                        <line 
+                            x1="${source.x}" y1="${source.y}" 
+                            x2="${target.x}" y2="${target.y}"
+                            stroke="${strokeColor}" 
+                            stroke-width="${strokeWidth}"
+                        />
+                        <circle cx="${midX + offsetX}" cy="${midY + offsetY}" r="12" fill="#f5f5f0" />
+                        <text 
+                            x="${midX + offsetX}" y="${midY + offsetY}" 
+                            text-anchor="middle" dominant-baseline="central"
+                            fill="${textColor}"
+                            font-size="16"
+                            font-weight="bold"
+                        >${edge.weight}</text>
+                    </g>
+                `;
+            });
+
+            // Vẽ đỉnh (Nodes)
+            state.nodes.forEach(node => {
+                const isStart = node.id === START_NODE_ID;
+                const isTarget = node.id === TARGET_NODE_ID;
+                const isVisited = state.visitedNodes.has(node.id);
+                const inShortestPath = state.shortestPathNodes.has(node.id);
+                
+                let fillColor = "transparent";
+                let strokeColor = "#c4c4c4";
+                let textColor = "#c4c4c4";
+
+                if (isStart || isTarget || inShortestPath) {
+                    fillColor = "#3d6a8f"; // Xanh sẫm
+                    strokeColor = "#2c5172";
+                    textColor = "white";
+                } else if (isVisited) {
+                    fillColor = "#e2e8f0"; // Xám nhạt
+                    strokeColor = "#94a3b8";
+                    textColor = "#64748b";
+                }
+
+                const distanceText = node.distance === Infinity ? '∞' : node.distance;
+
+                svgContent += `
+                    <g transform="translate(${node.x}, ${node.y})">
+                        <circle r="25" fill="${fillColor}" stroke="${strokeColor}" stroke-width="3" />
+                        <text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="bold" fill="${textColor}">${node.label}</text>
+                        ${node.distance !== undefined ? `
+                        <g transform="translate(0, -40)">
+                            <rect x="-20" y="-12" width="40" height="20" rx="4" fill="rgba(255,255,255,0.8)" stroke="#cbd5e1" stroke-width="1" />
+                            <text text-anchor="middle" dominant-baseline="central" font-size="12" fill="#334155" font-weight="bold">${distanceText}</text>
+                        </g>
+                        ` : ''}
+                    </g>
+                `;
+            });
+
+            svgEl.innerHTML = svgContent;
+        }
+
+        // --- ACTIONS ---
+        function resetGraphState() {
+            state.nodes = INITIAL_NODES.map(node => ({
+                ...node,
+                distance: node.id === START_NODE_ID ? 0 : Infinity,
+                previousNodeId: null,
+            }));
+            state.visitedNodes.clear();
+            state.activeEdges.clear();
+            state.shortestPathEdges.clear();
+            state.shortestPathNodes.clear();
+            state.currentCost = null;
+            state.isFinished = false;
+            state.statusMsg = "Đã khởi tạo lại. Bảng khoảng cách: A=0, các điểm khác = ∞.";
+            render();
+        }
+
+        function generateRandomWeights() {
+            if (state.isRunning) return;
+            state.edges = state.edges.map(edge => ({
+                ...edge,
+                weight: Math.floor(Math.random() * 9) + 1 // Random từ 1 đến 9
+            }));
+            state.statusMsg = "Đã tạo trọng số ngẫu nhiên mới. Sẵn sàng.";
+            resetGraphState();
+        }
+
+        async function runDijkstra() {
+            if (state.isRunning) return;
+            state.isRunning = true;
+            resetGraphState();
+            render();
+            
+            await delay(500); 
+
+            let unvisitedNodes = [...state.nodes].map(n => ({...n}));
+            const distances = {};
+            const previous = {};
+
+            unvisitedNodes.forEach(n => {
+                distances[n.id] = n.distance;
+                previous[n.id] = null;
+            });
+
+            state.statusMsg = `Bắt đầu từ node ${START_NODE_ID} với khoảng cách 0.`;
+            render();
+            await delay(1000);
+
+            while (unvisitedNodes.length > 0) {
+                unvisitedNodes.sort((a, b) => distances[a.id] - distances[b.id]);
+                const closestNode = unvisitedNodes.shift();
+
+                if (distances[closestNode.id] === Infinity) {
+                    state.statusMsg = "Các node còn lại không thể đi tới được. Thuật toán dừng.";
+                    render();
+                    break;
+                }
+
+                state.visitedNodes.add(closestNode.id);
+                
+                state.statusMsg = `Đang xét node [${closestNode.id}] (Khoảng cách ngắn nhất hiện tại: ${distances[closestNode.id]})`;
+                render();
+                await delay(1000);
+
+                if (closestNode.id === TARGET_NODE_ID) {
+                    state.statusMsg = `Đã duyệt đến đích [${TARGET_NODE_ID}]. Đang truy vết đường đi...`;
+                    render();
+                    await delay(1000);
+                    break;
+                }
+
+                const neighbors = state.edges.filter(e => e.source === closestNode.id || e.target === closestNode.id);
+                
+                for (const edge of neighbors) {
+                    const neighborId = edge.source === closestNode.id ? edge.target : edge.source;
+                    
+                    if (state.visitedNodes.has(neighborId)) continue;
+
+                    state.activeEdges = new Set([edge.id]);
+                    state.statusMsg = `Kiểm tra đường qua node [${neighborId}] qua cạnh có trọng số ${edge.weight}...`;
+                    render();
+                    await delay(800);
+
+                    const newDistance = distances[closestNode.id] + edge.weight;
+                    const neighborDistanceDisplay = distances[neighborId] === Infinity ? '∞' : distances[neighborId];
+                    
+                    if (newDistance < distances[neighborId]) {
+                        state.statusMsg = `Cập nhật khoảng cách [${neighborId}]: ${neighborDistanceDisplay} -> ${newDistance} (vì ${distances[closestNode.id]} + ${edge.weight} < ${neighborDistanceDisplay})`;
+                        distances[neighborId] = newDistance;
+                        previous[neighborId] = closestNode.id;
+                        
+                        // Cập nhật khoảng cách vào node
+                        const nodeToUpdate = state.nodes.find(n => n.id === neighborId);
+                        if (nodeToUpdate) nodeToUpdate.distance = newDistance;
+                        
+                        // Cập nhật unvisited list
+                        const unvNode = unvisitedNodes.find(n => n.id === neighborId);
+                        if(unvNode) unvNode.distance = newDistance;
+
+                        render();
+                        await delay(1500);
+                    } else {
+                        state.statusMsg = `Không cập nhật [${neighborId}]. Đường hiện tại (${neighborDistanceDisplay}) vẫn tối ưu hơn hoặc bằng đường mới (${newDistance}).`;
+                        render();
+                        await delay(1200);
+                    }
+                    
+                    state.activeEdges.clear();
+                    render();
+                }
+            }
+
+            // Truy vết đường đi
+            const pathNodes = [];
+            const pathEdges = new Set();
+            let currId = TARGET_NODE_ID;
+            
+            if (previous[TARGET_NODE_ID] !== undefined && previous[TARGET_NODE_ID] !== null) {
+                while (currId !== null) {
+                    pathNodes.unshift(currId);
+                    const prevId = previous[currId];
+                    if (prevId) {
+                        const connectingEdge = state.edges.find(e => 
+                            (e.source === prevId && e.target === currId) || 
+                            (e.source === currId && e.target === prevId)
+                        );
+                        if (connectingEdge) pathEdges.add(connectingEdge.id);
+                    }
+                    currId = prevId;
+                }
+
+                state.shortestPathNodes = new Set(pathNodes);
+                state.shortestPathEdges = pathEdges;
+                state.currentCost = distances[TARGET_NODE_ID];
+                state.statusMsg = `Hoàn tất! Đường ngắn nhất từ ${START_NODE_ID} đến ${TARGET_NODE_ID} là: ${pathNodes.join(' → ')} với tổng chi phí: ${distances[TARGET_NODE_ID]}`;
+            } else {
+                state.statusMsg = `Hoàn tất! Không tìm thấy đường đi từ ${START_NODE_ID} đến ${TARGET_NODE_ID}.`;
+            }
+
+            state.isFinished = true;
+            state.isRunning = false;
+            render();
+        }
+
+        // --- BIND EVENTS ---
+        btnRun.addEventListener('click', runDijkstra);
+        btnReset.addEventListener('click', resetGraphState);
+        btnRandom.addEventListener('click', generateRandomWeights);
+
+        // Xử lý sự kiện Modal Code Python
+        btnShowCode.addEventListener('click', () => {
+            codeModal.classList.remove('hidden');
+        });
+        
+        btnCloseCode.addEventListener('click', () => {
+            codeModal.classList.add('hidden');
+        });
+        
+        // Đóng modal khi bấm ra ngoài vùng tối
+        codeModal.addEventListener('click', (e) => {
+            if (e.target === codeModal) {
+                codeModal.classList.add('hidden');
+            }
+        });
+
+        // --- INIT ---
+        resetGraphState();
+
+    </script>
+</body>
+</html>

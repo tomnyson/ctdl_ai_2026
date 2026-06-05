@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dijkstra & Kruskal Visualization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:16px}
+h1{text-align:center;font-size:1.7rem;color:#f8fafc;margin-bottom:4px}
+.subtitle{text-align:center;color:#64748b;font-size:.85rem;margin-bottom:16px}
+
+/* Tabs */
+.tabs{display:flex;justify-content:center;gap:10px;margin-bottom:18px}
+.tab{padding:9px 28px;border-radius:10px;border:2px solid transparent;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s}
+.tab.dijk{background:#1e293b;color:#818cf8;border-color:#3730a3}
+.tab.dijk.active{background:#3730a3;color:#fff}
+.tab.krus{background:#1e293b;color:#34d399;border-color:#065f46}
+.tab.krus.active{background:#065f46;color:#fff}
+
+/* Panels */
+.panel{display:none}.panel.active{display:block}
+
+/* Controls */
+.controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px}
+.controls label{color:#94a3b8;font-size:.85rem;align-self:center}
+select{padding:7px 12px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:.88rem}
+button{padding:8px 18px;border-radius:8px;border:none;font-size:.88rem;font-weight:600;cursor:pointer;transition:filter .15s}
+button:hover{filter:brightness(1.2)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.btn-run{background:#6366f1;color:#fff}
+.btn-run.green{background:#059669}
+.btn-reset{background:#334155;color:#e2e8f0}
+.speed-wrap{display:flex;align-items:center;gap:7px}
+input[type=range]{width:90px;accent-color:#6366f1}
+
+/* Layout */
+.main{display:grid;grid-template-columns:1fr 310px;gap:14px;max-width:1020px;margin:0 auto}
+@media(max-width:700px){.main{grid-template-columns:1fr}}
+
+/* Canvas */
+.canvas-wrap{background:#1e293b;border-radius:14px;border:1px solid #334155;overflow:hidden}
+canvas{display:block;width:100%}
+
+/* Side panel */
+.side{display:flex;flex-direction:column;gap:12px}
+.card{background:#1e293b;border-radius:12px;border:1px solid #334155;padding:13px}
+.card h3{font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:9px}
+
+#dijk-status,#krus-status{
+  background:#1e293b;border:1px solid #334155;border-radius:10px;
+  padding:10px 13px;font-size:.85rem;color:#94a3b8;min-height:40px;
+  text-align:center;max-width:1020px;margin:0 auto 12px;
+}
+
+/* Distance table */
+.dist-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.dist-table th,.dist-table td{padding:5px 8px;text-align:center;border-bottom:1px solid #1e3a5f}
+.dist-table th{color:#475569;font-weight:600}
+.dist-table td.highlight{color:#fbbf24;font-weight:700}
+.dist-table td.settled{color:#34d399}
+
+/* Steps log */
+.steps-log{list-style:none;max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.steps-log li{padding:5px 9px;border-radius:6px;font-size:.8rem;background:#0f172a;color:#94a3b8;transition:all .3s}
+.steps-log li.active{background:#312e81;color:#c7d2fe;font-weight:600}
+.steps-log li.done{background:#14532d;color:#86efac}
+
+/* MST edges */
+.mst-edges{display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto}
+.mst-edge{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;border-radius:7px;background:#0f172a;font-size:.82rem;animation:pop-in .25s ease}
+.mst-edge .weight{background:#065f46;color:#6ee7b7;padding:2px 8px;border-radius:10px;font-weight:700;font-size:.78rem}
+
+/* All edges sorted */
+.edge-queue{display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto}
+.edge-item{display:flex;justify-content:space-between;padding:4px 10px;border-radius:6px;font-size:.8rem;background:#0f172a;color:#64748b}
+.edge-item.current{background:#78350f;color:#fde68a;font-weight:700}
+.edge-item.accepted{background:#14532d;color:#86efac}
+.edge-item.rejected{background:#3b0f0f;color:#fca5a5;text-decoration:line-through}
+
+@keyframes pop-in{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* Legend */
+.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.75rem;color:#64748b}
+.legend-dot{width:12px;height:12px;border-radius:50%}
+.legend-line{width:22px;height:3px;border-radius:2px}
+</style>
+</head>
+<body>
+<h1>🗺 Dijkstra & Kruskal Visualization</h1>
+<p class="subtitle">Thuật toán đường đi ngắn nhất & Cây khung nhỏ nhất</p>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab dijk active" onclick="switchTab('dijkstra')">🔵 Dijkstra</button>
+  <button class="tab krus"        onclick="switchTab('kruskal')">🟢 Kruskal</button>
+</div>
+
+<!-- ═══════════════ DIJKSTRA ═══════════════ -->
+<div id="panel-dijkstra" class="panel active">
+  <div class="controls">
+    <label>Đỉnh bắt đầu:</label>
+    <select id="dijk-start">
+      <option>A</option><option>B</option><option>C</option>
+      <option>D</option><option>E</option><option>F</option>
+    </select>
+    <button class="btn-run"   id="btn-dijk-run"   onclick="dijkstraStart()">▶ Chạy</button>
+    <button class="btn-reset" id="btn-dijk-reset" onclick="dijkstraReset()">↺ Reset</button>
+    <div class="speed-wrap">
+      <label>Tốc độ:</label>
+      <input type="range" id="dijk-speed" min="200" max="1800" value="900" step="100"/>
+    </div>
+  </div>
+  <div id="dijk-status">Chọn đỉnh bắt đầu và nhấn Chạy.</div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="dijk-canvas" width="640" height="420"></canvas></div>
+    <div class="side">
+      <div class="card">
+        <h3>Bảng khoảng cách</h3>
+        <table class="dist-table" id="dist-table">
+          <thead><tr><th>Đỉnh</th><th>Dist</th><th>Qua</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Các bước</h3>
+        <ul class="steps-log" id="dijk-steps"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>Chưa xét</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Đang xét</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Đã settle</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Bắt đầu</div>
+    <div class="legend-item"><div class="legend-line" style="background:#fbbf24"></div>Đường đi ngắn nhất</div>
+  </div>
+</div>
+
+<!-- ═══════════════ KRUSKAL ═══════════════ -->
+<div id="panel-kruskal" class="panel">
+  <div class="controls">
+    <button class="btn-run green" id="btn-krus-run"   onclick="kruskalStart()">▶ Chạy</button>
+    <button class="btn-reset"     id="btn-krus-reset" onclick="kruskalReset()">↺ Reset</button>
+    <div class="speed-wrap">
+      <label>Tốc độ:</label>
+      <input type="range" id="krus-speed" min="200" max="1800" value="900" step="100"/>
+    </div>
+  </div>
+  <div id="krus-status">Nhấn Chạy để bắt đầu Kruskal.</div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="krus-canvas" width="640" height="420"></canvas></div>
+    <div class="side">
+      <div class="card">
+        <h3>MST — Cây khung nhỏ nhất</h3>
+        <div class="mst-edges" id="mst-edges"></div>
+        <div id="mst-total" style="margin-top:8px;font-size:.82rem;color:#94a3b8"></div>
+      </div>
+      <div class="card">
+        <h3>Hàng đợi cạnh (sắp xếp tăng dần)</h3>
+        <div class="edge-queue" id="edge-queue"></div>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>Đỉnh</div>
+    <div class="legend-item"><div class="legend-line" style="background:#334155"></div>Cạnh thường</div>
+    <div class="legend-item"><div class="legend-line" style="background:#10b981"></div>Cạnh MST</div>
+    <div class="legend-item"><div class="legend-line" style="background:#f59e0b"></div>Đang xét</div>
+    <div class="legend-item"><div class="legend-line" style="background:#ef4444"></div>Tạo chu trình (bỏ)</div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  SHARED GRAPH
+// ════════════════════════════════════════════════
+// Weighted undirected graph
+const NODES = ['A','B','C','D','E','F'];
+const EDGES = [
+  {u:'A',v:'B',w:4},
+  {u:'A',v:'C',w:2},
+  {u:'B',v:'C',w:5},
+  {u:'B',v:'D',w:10},
+  {u:'C',v:'E',w:3},
+  {u:'B',v:'E',w:7},  // thêm cạnh để đồ thị phong phú hơn
+  {u:'E',v:'D',w:4},
+  {u:'D',v:'F',w:11},
+  {u:'E',v:'F',w:6},
+  {u:'C',v:'F',w:8},  // thêm
+];
+
+const POS = {
+  A:{x:100,y:210},
+  B:{x:260,y:80},
+  C:{x:260,y:340},
+  D:{x:430,y:80},
+  E:{x:430,y:340},
+  F:{x:560,y:210},
+};
+
+function switchTab(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.querySelector('.tab.'+(name==='dijkstra'?'dijk':'krus')).classList.add('active');
+}
+
+// ════════════════════════════════════════════════
+//  DIJKSTRA
+// ════════════════════════════════════════════════
+const dc = document.getElementById('dijk-canvas');
+const dctx = dc.getContext('2d');
+
+let dState = {}; // 'idle'|'current'|'settled'|'start'
+let dDist  = {};
+let dPrev  = {};
+let dShortPath = []; // edges on shortest path tree
+let dActiveEdge = null;
+let dRunning = false;
+let dTimer   = null;
+
+function dijkstraReset(){
+  clearTimeout(dTimer); dRunning=false;
+  dState={}; dDist={}; dPrev={}; dShortPath=[]; dActiveEdge=null;
+  NODES.forEach(n=>{dState[n]='idle'; dDist[n]=Infinity; dPrev[n]=null;});
+  document.getElementById('dijk-steps').innerHTML='';
+  document.getElementById('dijk-status').textContent='Chọn đỉnh bắt đầu và nhấn Chạy.';
+  document.getElementById('btn-dijk-run').disabled=false;
+  renderDistTable();
+  drawDijk();
+}
+
+function renderDistTable(current='', settled=new Set()){
+  const tb = document.querySelector('#dist-table tbody');
+  tb.innerHTML='';
+  NODES.forEach(n=>{
+    const tr=document.createElement('tr');
+    const d = dDist[n]===Infinity?'∞':dDist[n];
+    const p = dPrev[n]||'-';
+    const cls = n===current?'highlight': settled.has(n)?'settled':'';
+    tr.innerHTML=`<td>${n}</td><td class="${cls}">${d}</td><td>${p}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function dAddStep(txt, type=''){
+  const ul=document.getElementById('dijk-steps');
+  ul.querySelectorAll('li.active').forEach(li=>{li.classList.remove('active');li.classList.add('done');});
+  const li=document.createElement('li');
+  li.textContent=txt; li.className=type;
+  ul.appendChild(li); li.scrollIntoView({block:'nearest'});
+}
+
+function dDelay(){
+  const ms=1900-parseInt(document.getElementById('dijk-speed').value);
+  return new Promise(r=>{dTimer=setTimeout(r,ms);});
+}
+
+async function dijkstraStart(){
+  dijkstraReset();
+  dRunning=true;
+  document.getElementById('btn-dijk-run').disabled=true;
+  const src=document.getElementById('dijk-start').value;
+
+  NODES.forEach(n=>{dDist[n]=Infinity; dPrev[n]=null;});
+  dDist[src]=0;
+  dState[src]='start';
+  const settled=new Set();
+  const unvisited=new Set(NODES);
+
+  renderDistTable(src, settled);
+  drawDijk();
+  document.getElementById('dijk-status').textContent=`Khởi tạo: dist[${src}]=0, tất cả còn lại = ∞`;
+  dAddStep(`Bắt đầu từ "${src}" — dist=0`, 'active');
+  await dDelay();
+
+  // Build adjacency
+  const adj={};
+  NODES.forEach(n=>adj[n]=[]);
+  EDGES.forEach(({u,v,w})=>{adj[u].push({n:v,w});adj[v].push({n:u,w});});
+
+  while(unvisited.size>0){
+    if(!dRunning) return;
+    // Pick min dist unvisited
+    let u=null, minD=Infinity;
+    for(const n of unvisited) if(dDist[n]<minD){minD=dDist[n];u=n;}
+    if(u===null||minD===Infinity) break;
+
+    unvisited.delete(u);
+    settled.add(u);
+    dState[u]='current';
+    renderDistTable(u, settled);
+    drawDijk();
+    document.getElementById('dijk-status').textContent=`Settle đỉnh "${u}" — dist=${minD}`;
+    dAddStep(`Settle "${u}" (dist=${minD})`, 'active');
+    await dDelay();
+
+    // Relax neighbors
+    for(const {n:v, w} of adj[u]){
+      if(settled.has(v)) continue;
+      dActiveEdge={u,v};
+      drawDijk();
+      await dDelay();
+      const newD=dDist[u]+w;
+      if(newD<dDist[v]){
+        dDist[v]=newD; dPrev[v]=u;
+        // update shortest path tree
+        dShortPath=dShortPath.filter(e=>e.v!==v);
+        dShortPath.push({u,v,w});
+        dAddStep(`  Cập nhật dist[${v}] = ${newD} (qua ${u})`);
+        renderDistTable(u, settled);
+      }
+    }
+    dActiveEdge=null;
+    dState[u]='settled';
+    drawDijk();
+  }
+
+  dActiveEdge=null;
+  drawDijk();
+  const result=NODES.map(n=>`${n}:${dDist[n]===Infinity?'∞':dDist[n]}`).join('  ');
+  document.getElementById('dijk-status').textContent=`✅ Hoàn thành! ${result}`;
+  dAddStep('Hoàn thành!','done');
+  document.getElementById('btn-dijk-run').disabled=false;
+}
+
+function drawDijk(){
+  const C=dctx; C.clearRect(0,0,dc.width,dc.height);
+
+  // Draw all edges
+  const drawn=new Set();
+  EDGES.forEach(({u,v,w})=>{
+    const key=[u,v].sort().join('-');
+    if(drawn.has(key)) return; drawn.add(key);
+    const pu=POS[u],pv=POS[v];
+    const isShort=dShortPath.some(e=>(e.u===u&&e.v===v)||(e.u===v&&e.v===u));
+    const isActive=dActiveEdge&&((dActiveEdge.u===u&&dActiveEdge.v===v)||(dActiveEdge.u===v&&dActiveEdge.v===u));
+
+    C.beginPath(); C.moveTo(pu.x,pu.y); C.lineTo(pv.x,pv.y);
+    C.strokeStyle=isActive?'#f59e0b':isShort?'#fbbf24':'#334155';
+    C.lineWidth=isActive?3.5:isShort?3:1.5; C.stroke();
+
+    // Weight label
+    const mx=(pu.x+pv.x)/2, my=(pu.y+pv.y)/2;
+    C.fillStyle='#1e293b'; C.beginPath(); C.arc(mx,my,11,0,Math.PI*2); C.fill();
+    C.font='bold 11px Segoe UI'; C.fillStyle='#94a3b8';
+    C.textAlign='center'; C.textBaseline='middle';
+    C.fillText(w,mx,my);
+  });
+
+  // Draw nodes
+  NODES.forEach(n=>{
+    const p=POS[n];
+    const s=dState[n]||'idle';
+    const col=s==='current'?'#f59e0b':s==='settled'?'#10b981':s==='start'?'#ef4444':'#6366f1';
+    if(s==='current'){
+      C.beginPath(); C.arc(p.x,p.y,28,0,Math.PI*2);
+      C.fillStyle='rgba(245,158,11,.2)'; C.fill();
+    }
+    C.beginPath(); C.arc(p.x,p.y,22,0,Math.PI*2);
+    C.fillStyle=col; C.fill();
+    C.font='bold 15px Segoe UI'; C.fillStyle='#fff';
+    C.textAlign='center'; C.textBaseline='middle';
+    C.fillText(n,p.x,p.y);
+
+    // Distance label
+    const d=dDist[n]===undefined?'':dDist[n]===Infinity?'∞':dDist[n];
+    if(d!==''){
+      C.font='11px Segoe UI'; C.fillStyle='#fbbf24';
+      C.fillText(d, p.x, p.y+33);
+    }
+  });
+}
+
+// ════════════════════════════════════════════════
+//  KRUSKAL
+// ════════════════════════════════════════════════
+const kc  = document.getElementById('krus-canvas');
+const kctx = kc.getContext('2d');
+
+let kMST=[];
+let kEdgeStates={}; // edge-key -> 'pending'|'current'|'accepted'|'rejected'
+let kRunning=false;
+let kTimer=null;
+
+function kruskalReset(){
+  clearTimeout(kTimer); kRunning=false;
+  kMST=[]; kEdgeStates={};
+  EDGES.forEach(e=>kEdgeStates[ekey(e)]='pending');
+  document.getElementById('mst-edges').innerHTML='';
+  document.getElementById('mst-total').textContent='';
+  document.getElementById('krus-status').textContent='Nhấn Chạy để bắt đầu Kruskal.';
+  document.getElementById('btn-krus-run').disabled=false;
+  renderEdgeQueue();
+  drawKrus();
+}
+
+function ekey({u,v}){return [u,v].sort().join('-');}
+
+function renderEdgeQueue(){
+  const sorted=[...EDGES].sort((a,b)=>a.w-b.w);
+  const div=document.getElementById('edge-queue');
+  div.innerHTML='';
+  sorted.forEach(e=>{
+    const s=kEdgeStates[ekey(e)]||'pending';
+    const el=document.createElement('div');
+    el.className='edge-item '+(s==='current'?'current':s==='accepted'?'accepted':s==='rejected'?'rejected':'');
+    el.innerHTML=`<span>${e.u} — ${e.v}</span><span style="font-weight:700;color:${s==='accepted'?'#34d399':s==='rejected'?'#f87171':'#94a3b8'}">w=${e.w}</span>`;
+    div.appendChild(el);
+  });
+}
+
+function kDelay(){
+  const ms=1900-parseInt(document.getElementById('krus-speed').value);
+  return new Promise(r=>{kTimer=setTimeout(r,ms);});
+}
+
+// Union-Find
+function makeUF(){
+  const p={},r={};
+  NODES.forEach(n=>{p[n]=n;r[n]=0;});
+  function find(x){if(p[x]!==x)p[x]=find(p[x]);return p[x];}
+  function union(a,b){
+    const ra=find(a),rb=find(b);
+    if(ra===rb) return false;
+    if(r[ra]<r[rb]) p[ra]=rb;
+    else if(r[ra]>r[rb]) p[rb]=ra;
+    else {p[rb]=ra; r[ra]++;}
+    return true;
+  }
+  return {find,union};
+}
+
+async function kruskalStart(){
+  kruskalReset();
+  kRunning=true;
+  document.getElementById('btn-krus-run').disabled=true;
+
+  const sorted=[...EDGES].sort((a,b)=>a.w-b.w);
+  const uf=makeUF();
+  let total=0;
+
+  document.getElementById('krus-status').textContent='Sắp xếp tất cả cạnh theo trọng số tăng dần...';
+  await kDelay();
+
+  for(const e of sorted){
+    if(!kRunning) return;
+    const k=ekey(e);
+    kEdgeStates[k]='current';
+    renderEdgeQueue(); drawKrus();
+    document.getElementById('krus-status').textContent=`Xét cạnh ${e.u}—${e.v} (w=${e.w})...`;
+    await kDelay();
+
+    if(uf.union(e.u,e.v)){
+      kEdgeStates[k]='accepted';
+      kMST.push(e); total+=e.w;
+      // Add to MST display
+      const row=document.createElement('div');
+      row.className='mst-edge';
+      row.innerHTML=`<span>${e.u} ── ${e.v}</span><span class="weight">w=${e.w}</span>`;
+      document.getElementById('mst-edges').appendChild(row);
+      document.getElementById('mst-total').textContent=`Tổng trọng số MST: ${total}`;
+      document.getElementById('krus-status').textContent=`✅ Thêm cạnh ${e.u}—${e.v} vào MST (w=${e.w})`;
+    } else {
+      kEdgeStates[k]='rejected';
+      document.getElementById('krus-status').textContent=`❌ Bỏ cạnh ${e.u}—${e.v} — tạo chu trình!`;
+    }
+    renderEdgeQueue(); drawKrus();
+    await kDelay();
+
+    if(kMST.length===NODES.length-1) break;
+  }
+
+  drawKrus();
+  document.getElementById('krus-status').textContent=`✅ MST hoàn thành! Tổng trọng số = ${kMST.reduce((s,e)=>s+e.w,0)}`;
+  document.getElementById('btn-krus-run').disabled=false;
+}
+
+function drawKrus(){
+  const C=kctx; C.clearRect(0,0,kc.width,kc.height);
+
+  // Draw edges
+  const drawn=new Set();
+  EDGES.forEach(e=>{
+    const key=[e.u,e.v].sort().join('-');
+    if(drawn.has(key)) return; drawn.add(key);
+    const pu=POS[e.u],pv=POS[e.v];
+    const s=kEdgeStates[ekey(e)]||'pending';
+    const col=s==='accepted'?'#10b981':s==='current'?'#f59e0b':s==='rejected'?'#ef4444':'#334155';
+    const lw =s==='accepted'?3.5:s==='current'?3:1.5;
+
+    C.beginPath(); C.moveTo(pu.x,pu.y); C.lineTo(pv.x,pv.y);
+    C.strokeStyle=col; C.lineWidth=lw; C.stroke();
+
+    // glow for current
+    if(s==='current'){
+      C.beginPath(); C.moveTo(pu.x,pu.y); C.lineTo(pv.x,pv.y);
+      C.strokeStyle='rgba(245,158,11,.25)'; C.lineWidth=10; C.stroke();
+    }
+
+    const mx=(pu.x+pv.x)/2, my=(pu.y+pv.y)/2;
+    C.fillStyle='#1e293b'; C.beginPath(); C.arc(mx,my,12,0,Math.PI*2); C.fill();
+    C.font='bold 11px Segoe UI';
+    C.fillStyle=s==='accepted'?'#6ee7b7':s==='current'?'#fde68a':s==='rejected'?'#fca5a5':'#94a3b8';
+    C.textAlign='center'; C.textBaseline='middle';
+    C.fillText(e.w,mx,my);
+  });
+
+  // Draw nodes
+  NODES.forEach(n=>{
+    const p=POS[n];
+    const inMST=kMST.some(e=>e.u===n||e.v===n);
+    const col=inMST?'#059669':'#6366f1';
+    C.beginPath(); C.arc(p.x,p.y,22,0,Math.PI*2);
+    C.fillStyle=col; C.fill();
+    C.font='bold 15px Segoe UI'; C.fillStyle='#fff';
+    C.textAlign='center'; C.textBaseline='middle';
+    C.fillText(n,p.x,p.y);
+  });
+}
+
+// Init
+dijkstraReset();
+kruskalReset();
+</script>
+</body>
+</html>

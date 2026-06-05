@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Plan Backtracking Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans selection:bg-brand-100 selection:text-brand-900">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-xl">
+                    🥗
+                </div>
+                <h1 class="font-bold text-xl tracking-tight text-slate-900">MealPlan<span class="text-brand-600 font-light">Backtracker</span></h1>
+            </div>
+            <div class="text-sm text-slate-500 font-medium">Trực quan hóa thuật toán quay lui</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Column: Code & Problem Info -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Problem Definition Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h2 class="text-lg font-semibold mb-4 text-slate-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    Dữ liệu đầu vào
+                </h2>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Mục tiêu Kcal (Target):</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="targetKcalInput" value="500" class="block w-32 rounded-lg border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm px-3 py-2 border font-mono">
+                        <span class="text-slate-500 font-medium">kcal</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Danh sách món ăn:</label>
+                    <div class="flex flex-wrap gap-2" id="foodListContainer">
+                        <!-- Foods will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Snippet Card -->
+            <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 overflow-hidden flex flex-col">
+                <div class="bg-slate-800 px-4 py-2 flex items-center justify-between border-b border-slate-700">
+                    <span class="text-xs font-mono text-slate-400">meal_plan.py</span>
+                    <div class="flex gap-1.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+                    </div>
+                </div>
+                <div class="p-4 overflow-x-auto text-sm font-mono text-slate-300 leading-relaxed">
+<pre><code><span class="text-brand-400">def</span> <span class="text-blue-400">meal_plan</span>(foods, target_kcal):
+    result = []
+    
+    <span class="text-slate-500 italic"># Sắp xếp mảng tăng dần để Pruning tối ưu</span>
+    foods.sort(key=<span class="text-brand-400">lambda</span> x: x[1])
+
+    <span class="text-brand-400">def</span> <span class="text-blue-400">backtrack</span>(start, current_meal, current_kcal):
+        <span class="text-slate-500 italic"># 1. Đạt mục tiêu Kcal</span>
+        <span class="text-pink-400">if</span> current_kcal == target_kcal:
+            result.append(current_meal.copy())
+            <span class="text-pink-400">return</span>
+
+        <span class="text-slate-500 italic"># 2. Duyệt nhánh (CHOOSE, EXPLORE, UNCHOOSE)</span>
+        <span class="text-pink-400">for</span> i <span class="text-pink-400">in</span> <span class="text-yellow-200">range</span>(start, <span class="text-yellow-200">len</span>(foods)):
+            name, kcal = foods[i]
+            
+            <span class="text-slate-500 italic"># --- PRUNING TỐI ƯU ---</span>
+            <span class="text-pink-400">if</span> current_kcal + kcal > target_kcal:
+                <span class="text-pink-400">break</span> <span class="text-slate-500 italic"># Dừng vòng lặp, bỏ qua các món phía sau</span>
+            
+            current_meal.append(name) <span class="text-slate-500 italic"># CHOOSE</span>
+            
+            backtrack(i + 1, current_meal, current_kcal + kcal) <span class="text-slate-500 italic"># EXPLORE</span>
+            
+            current_meal.pop() <span class="text-slate-500 italic"># UNCHOOSE</span>
+
+    backtrack(0, [], 0)
+    <span class="text-pink-400">return</span> result</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Visualizer -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Controls -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-800">Trình mô phỏng</h3>
+                    <p class="text-sm text-slate-500">Xem cách thuật toán tìm kiếm và cắt tỉa</p>
+                </div>
+                <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                    
+                    <!-- Thanh chỉnh tốc độ mô phỏng -->
+                    <div class="flex items-center gap-2 w-full sm:w-auto px-2">
+                        <span class="text-xs font-medium text-slate-500">Chậm</span>
+                        <input type="range" id="speedSlider" min="1" max="20" value="15" class="w-full sm:w-24 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-500">
+                        <span class="text-xs font-medium text-slate-500">Nhanh</span>
+                    </div>
+
+                    <div class="flex gap-3 w-full sm:w-auto">
+                        <button id="btnReset" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors w-full sm:w-auto">Làm mới</button>
+                        <button id="btnStart" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-sm transition-colors w-full sm:w-auto flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                            Chạy mô phỏng
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization Area -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden min-h-[400px]">
+                
+                <!-- Active State Banner -->
+                <div class="p-6 border-b border-slate-100 bg-slate-50">
+                    <div class="flex justify-between items-end mb-2">
+                        <div class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Trạng thái hiện tại</div>
+                        <div class="text-sm font-bold text-slate-700" id="currentKcalText">0 / 500 kcal</div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="w-full h-4 bg-slate-200 rounded-full overflow-hidden relative">
+                        <div id="kcalProgressBar" class="h-full bg-brand-500 transition-all duration-300 ease-out" style="width: 0%;"></div>
+                        <!-- Marker line for Target -->
+                        <div class="absolute top-0 bottom-0 border-l-2 border-dashed border-slate-800" style="left: 100%;"></div>
+                    </div>
+
+                    <!-- Current Array -->
+                    <div class="mt-4">
+                        <span class="text-sm font-medium text-slate-600 mr-2">Mảng `current_meal`:</span>
+                        <div id="currentArray" class="inline-flex flex-wrap gap-2 min-h-[32px] items-center">
+                            <span class="text-slate-400 italic text-sm">[] (Trống)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs & Results -->
+                <div class="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x border-t border-slate-100">
+                    
+                    <!-- Execution Log -->
+                    <div class="flex flex-col h-64 md:h-[400px]">
+                        <div class="p-3 border-b border-slate-100 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0">
+                            Nhật ký chạy (Log)
+                        </div>
+                        <div id="logContainer" class="p-4 overflow-y-auto flex-1 font-mono text-sm space-y-2">
+                            <div class="text-slate-400 italic text-center mt-4">Nhấn "Chạy mô phỏng" để bắt đầu...</div>
+                        </div>
+                    </div>
+
+                    <!-- Valid Results -->
+                    <div class="flex flex-col h-64 md:h-[400px]">
+                        <div class="p-3 border-b border-slate-100 bg-slate-50 text-xs font-bold text-brand-600 uppercase tracking-wider sticky top-0 flex justify-between">
+                            <span>Kết quả tìm được</span>
+                            <span id="resultCount" class="bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full text-[10px]">0</span>
+                        </div>
+                        <div id="resultsContainer" class="p-4 overflow-y-auto flex-1 space-y-3 bg-brand-50/30">
+                            <!-- Results inject here -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Data Configuration
+        const initialFoods = [
+            { name: "Cơm", kcal: 250, color: "bg-orange-100 text-orange-800 border-orange-200" },
+            { name: "Trứng", kcal: 150, color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+            { name: "Gà", kcal: 300, color: "bg-red-100 text-red-800 border-red-200" },
+            { name: "Sữa", kcal: 120, color: "bg-blue-100 text-blue-800 border-blue-200" },
+            { name: "Chuối", kcal: 100, color: "bg-yellow-50 text-yellow-600 border-yellow-200" },
+            { name: "Rau", kcal: 80, color: "bg-green-100 text-green-800 border-green-200" }
+        ];
+
+        // MỚI: Sắp xếp mảng tăng dần ngay từ đầu để Pruning
+        initialFoods.sort((a, b) => a.kcal - b.kcal);
+
+        // UI Elements
+        const elFoodList = document.getElementById('foodListContainer');
+        const elTargetInput = document.getElementById('targetKcalInput');
+        const elBtnStart = document.getElementById('btnStart');
+        const elBtnReset = document.getElementById('btnReset');
+        const elCurrentArray = document.getElementById('currentArray');
+        const elKcalProgressBar = document.getElementById('kcalProgressBar');
+        const elCurrentKcalText = document.getElementById('currentKcalText');
+        const elLogContainer = document.getElementById('logContainer');
+        const elResultsContainer = document.getElementById('resultsContainer');
+        const elResultCount = document.getElementById('resultCount');
+        const elSpeedSlider = document.getElementById('speedSlider');
+
+        // State Variables
+        let isRunning = false;
+        let animationQueue = [];
+        let currentTimer = null;
+        let foundResults = [];
+
+        // Helper: Render initial food badges
+        function renderFoods() {
+            elFoodList.innerHTML = initialFoods.map(f => `
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border shadow-sm ${f.color}">
+                    ${f.name} <span class="opacity-60 text-xs">${f.kcal}</span>
+                </span>
+            `).join('');
+        }
+        renderFoods();
+
+        // Helper: Get food styling info
+        function getFoodStyle(name) {
+            const food = initialFoods.find(f => f.name === name);
+            return food ? food.color : 'bg-slate-100 text-slate-800';
+        }
+
+        // The Core Algorithm (Modified to record steps instead of just returning)
+        function generateBacktrackSteps(targetKcal) {
+            let steps = [];
+            let tempResults = [];
+
+            function backtrack(start, currentMeal, currentKcal) {
+                // Record state entry
+                steps.push({
+                    action: 'CHECK',
+                    meal: [...currentMeal],
+                    kcal: currentKcal,
+                    msg: `Kiểm tra: ${currentKcal} kcal`
+                });
+
+                // Base case 1: Found target
+                if (currentKcal === targetKcal) {
+                    tempResults.push([...currentMeal]);
+                    steps.push({
+                        action: 'SUCCESS',
+                        meal: [...currentMeal],
+                        kcal: currentKcal,
+                        msg: `Đạt ${targetKcal} kcal! Đã lưu kết quả.`
+                    });
+                    return;
+                }
+
+                // Recursive step
+                for (let i = start; i < initialFoods.length; i++) {
+                    const food = initialFoods[i];
+                    
+                    // --- MỚI: PRUNING CỰC MẠNH (BREAK) ---
+                    if (currentKcal + food.kcal > targetKcal) {
+                        steps.push({
+                            action: 'PRUNE',
+                            meal: [...currentMeal],
+                            kcal: currentKcal + food.kcal, // Show anticipated failure
+                            msg: `Dự đoán: ${currentKcal} + ${food.kcal} > ${targetKcal} -> Bỏ qua toàn bộ món sau (Break)`
+                        });
+                        break; // Vì mảng đã sắp xếp, món hiện tại vượt quá thì món sau chắc chắn vượt quá
+                    }
+
+                    // CHOOSE
+                    currentMeal.push(food.name);
+                    steps.push({
+                        action: 'CHOOSE',
+                        meal: [...currentMeal],
+                        kcal: currentKcal + food.kcal,
+                        msg: `Chọn [${food.name} (${food.kcal})]`,
+                        foodAdded: food.name
+                    });
+
+                    // EXPLORE
+                    backtrack(i + 1, currentMeal, currentKcal + food.kcal);
+
+                    // UNCHOOSE
+                    const removed = currentMeal.pop();
+                    steps.push({
+                        action: 'UNCHOOSE',
+                        meal: [...currentMeal],
+                        kcal: currentKcal,
+                        msg: `Quay lui (Bỏ ${removed})`
+                    });
+                }
+            }
+
+            backtrack(0, [], 0);
+            return steps;
+        }
+
+        // UI Updater Functions
+        function updateVisualizerState(step, targetKcal) {
+            // Update Array
+            if (step.meal.length === 0) {
+                elCurrentArray.innerHTML = `<span class="text-slate-400 italic text-sm">[] (Trống)</span>`;
+            } else {
+                elCurrentArray.innerHTML = step.meal.map(name => {
+                    const style = getFoodStyle(name);
+                    return `<span class="px-2 py-0.5 rounded-md text-xs font-semibold border fade-in ${style}">${name}</span>`;
+                }).join('<span class="text-slate-300">,</span>');
+            }
+
+            // Update Progress Bar & Text
+            elCurrentKcalText.innerText = `${step.kcal} / ${targetKcal} kcal`;
+            let percentage = (step.kcal / targetKcal) * 100;
+            
+            // Cap at 100% for UI purposes if exceeded, but change color
+            elKcalProgressBar.style.width = `${Math.min(percentage, 100)}%`;
+            
+            if (step.action === 'PRUNE') {
+                elKcalProgressBar.className = "h-full transition-all duration-300 ease-out bg-red-500";
+                elCurrentKcalText.className = "text-sm font-bold text-red-600";
+            } else if (step.action === 'SUCCESS') {
+                elKcalProgressBar.className = "h-full transition-all duration-300 ease-out bg-brand-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]";
+                elCurrentKcalText.className = "text-sm font-bold text-brand-600";
+            } else {
+                elKcalProgressBar.className = "h-full transition-all duration-300 ease-out bg-brand-500";
+                elCurrentKcalText.className = "text-sm font-bold text-slate-700";
+            }
+
+            // Add Log Entry
+            const logEl = document.createElement('div');
+            logEl.className = 'flex gap-2 items-start fade-in';
+            
+            let icon = `<span class="text-slate-400">→</span>`;
+            let textClass = "text-slate-600";
+            
+            if (step.action === 'CHOOSE') { icon = `<span class="text-blue-500 font-bold">+</span>`; textClass = "text-blue-700"; }
+            if (step.action === 'UNCHOOSE') { icon = `<span class="text-orange-400 font-bold">-</span>`; textClass = "text-orange-600"; }
+            if (step.action === 'PRUNE') { icon = `<span class="text-red-500 font-bold">×</span>`; textClass = "text-red-600 font-medium bg-red-50 px-1 rounded"; }
+            if (step.action === 'SUCCESS') { icon = `<span class="text-brand-500 font-bold">✓</span>`; textClass = "text-brand-700 font-bold bg-brand-50 px-1 rounded"; }
+
+            logEl.innerHTML = `
+                <div class="mt-0.5 w-4 text-center shrink-0">${icon}</div>
+                <div class="${textClass}">${step.msg}</div>
+            `;
+            elLogContainer.appendChild(logEl);
+            
+            // Auto scroll to bottom
+            elLogContainer.scrollTop = elLogContainer.scrollHeight;
+
+            // Handle Success Result saving
+            if (step.action === 'SUCCESS') {
+                const resEl = document.createElement('div');
+                resEl.className = 'bg-white p-3 rounded-lg border border-brand-200 shadow-sm fade-in flex flex-wrap gap-2 items-center';
+                resEl.innerHTML = step.meal.map(name => {
+                    const style = getFoodStyle(name);
+                    return `<span class="px-2 py-0.5 rounded-md text-xs font-medium border ${style}">${name}</span>`;
+                }).join('<span class="text-slate-300 text-xs">+</span>');
+                
+                elResultsContainer.appendChild(resEl);
+                foundResults.push(step.meal);
+                elResultCount.innerText = foundResults.length;
+            }
+        }
+
+        // Control Handlers
+        function resetVisualizer() {
+            if (currentTimer) clearTimeout(currentTimer);
+            isRunning = false;
+            animationQueue = [];
+            foundResults = [];
+            
+            elBtnStart.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg> Chạy mô phỏng`;
+            elBtnStart.className = "px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-sm transition-colors w-full sm:w-auto flex items-center justify-center gap-2";
+            
+            elLogContainer.innerHTML = '';
+            elResultsContainer.innerHTML = '';
+            elResultCount.innerText = '0';
+            
+            // Reset state visual
+            updateVisualizerState({ action: 'RESET', meal: [], kcal: 0, msg: 'Đã làm mới.' }, parseInt(elTargetInput.value) || 500);
+            elLogContainer.innerHTML = '<div class="text-slate-400 italic text-center mt-4">Nhấn "Chạy mô phỏng" để bắt đầu...</div>';
+            
+            elTargetInput.disabled = false;
+        }
+
+        function startSimulation() {
+            if (isRunning) return; // Prevent double click
+            
+            resetVisualizer();
+            const targetKcal = parseInt(elTargetInput.value);
+            
+            if (isNaN(targetKcal) || targetKcal <= 0) {
+                // Inline validation warning
+                const warn = document.createElement('div');
+                warn.className = "text-red-500 text-sm mt-2";
+                warn.innerText = "Vui lòng nhập số Kcal hợp lệ (> 0)";
+                elLogContainer.innerHTML = '';
+                elLogContainer.appendChild(warn);
+                return;
+            }
+
+            elTargetInput.disabled = true;
+            isRunning = true;
+            
+            // Change button state
+            elBtnStart.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Đang chạy...`;
+            elBtnStart.className = "px-4 py-2 bg-slate-400 text-white font-medium rounded-lg shadow-sm transition-colors w-full sm:w-auto flex items-center justify-center gap-2 cursor-not-allowed";
+            elLogContainer.innerHTML = '';
+
+            // Generate all steps instantly in JS
+            animationQueue = generateBacktrackSteps(targetKcal);
+            
+            // Playback steps visually
+            let stepIndex = 0;
+            
+            function playNextStep() {
+                if (stepIndex >= animationQueue.length) {
+                    isRunning = false;
+                    elTargetInput.disabled = false;
+                    elBtnStart.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg> Chạy lại`;
+                    elBtnStart.className = "px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-sm transition-colors w-full sm:w-auto flex items-center justify-center gap-2";
+                    
+                    const doneEl = document.createElement('div');
+                    doneEl.className = "text-center text-brand-600 font-medium py-2 bg-brand-50 rounded mt-4";
+                    doneEl.innerText = `Hoàn thành! Tìm được ${foundResults.length} tập con.`;
+                    elLogContainer.appendChild(doneEl);
+                    elLogContainer.scrollTop = elLogContainer.scrollHeight;
+                    return;
+                }
+
+                updateVisualizerState(animationQueue[stepIndex], targetKcal);
+                stepIndex++;
+                
+                // Tính toán tốc độ dựa trên thanh trượt
+                // Giá trị slider từ 1 -> 20. Giá trị càng lớn thì delay càng nhỏ (chạy nhanh hơn)
+                const sliderValue = parseInt(elSpeedSlider.value);
+                const delayMs = (21 - sliderValue) * 50; 
+                
+                currentTimer = setTimeout(playNextStep, delayMs);
+            }
+            
+            playNextStep();
+        }
+
+        // Bind Events
+        elBtnStart.addEventListener('click', startSimulation);
+        elBtnReset.addEventListener('click', resetVisualizer);
+        
+        // Allow Enter key in input
+        elTargetInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startSimulation();
+        });
+
+    </script>
+</body>
+</html>

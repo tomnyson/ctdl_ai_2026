@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merge Sort Algorithm Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* slate-900 */
+            color: #f8fafc; /* slate-50 */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .array-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 350px;
+            gap: 4px;
+            padding: 20px;
+            background-color: #1e293b; /* slate-800 */
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .array-bar {
+            width: 30px;
+            background-color: #3b82f6; /* blue-500 */
+            border-radius: 4px 4px 0 0;
+            transition: height 0.3s ease, background-color 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            position: relative;
+        }
+
+        /* States for sorting visualization */
+        .array-bar.default { background-color: #3b82f6; } /* blue-500 */
+        .array-bar.comparing { background-color: #eab308; } /* yellow-500 */
+        .array-bar.sorting { background-color: #ec4899; } /* pink-500 */
+        .array-bar.sorted { background-color: #22c55e; } /* green-500 */
+        
+        .explanation-box {
+            background-color: #1e293b;
+            border-left: 4px solid #3b82f6;
+            padding: 16px;
+            border-radius: 8px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+
+        /* Range slider styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #475569;
+            border-radius: 2px;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="p-6 md:p-10">
+    <div class="max-w-5xl mx-auto w-full">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
+                Merge Sort Visualization
+            </h1>
+            <p class="text-slate-400">Xem thuật toán chia để trị hoạt động từng bước một</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 flex flex-col">
+                <!-- Visualization Area -->
+                <div id="array-container" class="array-container relative">
+                    <!-- Bars will be generated here -->
+                </div>
+
+                <!-- Explanation Area -->
+                <div class="explanation-box mb-6" id="explanation-text">
+                    Chào mừng! Nhấn "Bắt đầu Sắp xếp" để xem thuật toán Merge Sort chia nhỏ và gộp mảng như thế nào.
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-xl h-fit border border-slate-700 shadow-lg">
+                <h2 class="text-xl font-semibold mb-6 border-b border-slate-600 pb-2">Điều khiển</h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-medium text-slate-300">Số lượng phần tử</label>
+                            <span id="size-value" class="text-sm text-blue-400 font-bold">15</span>
+                        </div>
+                        <input type="range" id="array-size" min="5" max="30" value="15" class="w-full">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-medium text-slate-300">Tốc độ hoạt ảnh</label>
+                            <span id="speed-value" class="text-sm text-blue-400 font-bold">Vừa</span>
+                        </div>
+                        <input type="range" id="speed" min="1" max="100" value="50" class="w-full">
+                    </div>
+
+                    <div class="flex flex-col gap-3 mt-8">
+                        <button id="generate-btn" class="w-full py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium focus:ring-2 focus:ring-slate-400 outline-none">
+                            Tạo mảng mới
+                        </button>
+                        <button id="sort-btn" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium shadow-md shadow-blue-500/20 focus:ring-2 focus:ring-blue-400 outline-none">
+                            Bắt đầu Sắp xếp
+                        </button>
+                        <button id="reset-btn" class="w-full py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors font-medium shadow-md shadow-red-500/20 focus:ring-2 focus:ring-red-400 outline-none hidden">
+                            Dừng / Đặt lại
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-8 pt-6 border-t border-slate-700">
+                    <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Độ phức tạp thời gian</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="text-slate-400">Tốt nhất:</div>
+                        <div class="font-mono text-emerald-400 text-right">O(n log n)</div>
+                        
+                        <div class="text-slate-400">Trung bình:</div>
+                        <div class="font-mono text-yellow-400 text-right">O(n log n)</div>
+                        
+                        <div class="text-slate-400">Xấu nhất:</div>
+                        <div class="font-mono text-rose-400 text-right">O(n log n)</div>
+                        
+                        <div class="text-slate-400 mt-2 pt-2 border-t border-slate-700">Không gian:</div>
+                        <div class="font-mono text-blue-400 text-right mt-2 pt-2 border-t border-slate-700">O(n)</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // DOM Elements
+        const container = document.getElementById("array-container");
+        const generateBtn = document.getElementById("generate-btn");
+        const sortBtn = document.getElementById("sort-btn");
+        const resetBtn = document.getElementById("reset-btn");
+        const sizeSlider = document.getElementById("array-size");
+        const speedSlider = document.getElementById("speed");
+        const sizeValue = document.getElementById("size-value");
+        const speedValue = document.getElementById("speed-value");
+        const explanationText = document.getElementById("explanation-text");
+
+        // State variables
+        let array = [];
+        let bars = [];
+        let isSorting = false;
+        let shouldStop = false;
+        let delayTime = 300; // default delay
+
+        // CONSTANTS for colors
+        const DEFAULT_COLOR = '#3b82f6';
+        const COMPARING_COLOR = '#eab308';
+        const SORTING_COLOR = '#ec4899';
+        const SORTED_COLOR = '#22c55e';
+        const PIVOT_COLOR = '#8b5cf6'; // purple-500
+
+        function updateSpeedDisplay(value) {
+            if (value > 80) speedValue.textContent = "Chậm";
+            else if (value > 40) speedValue.textContent = "Vừa";
+            else speedValue.textContent = "Nhanh";
+            
+            // Calculate delay: 1 -> 50ms (fast), 100 -> 1000ms (slow)
+            // Inverse mapping since slider min (1) usually means fast to user visually, 
+            // wait we want min(1) = fast(low delay), max(100) = slow(high delay)
+            // Let's re-map: 1 = fast (low ms), 100 = slow (high ms)
+            delayTime = value * 10; 
+        }
+
+        function init() {
+            generateArray();
+            updateSpeedDisplay(speedSlider.value);
+            
+            // Event Listeners
+            sizeSlider.addEventListener("input", (e) => {
+                sizeValue.textContent = e.target.value;
+                generateArray();
+            });
+
+            speedSlider.addEventListener("input", (e) => {
+                updateSpeedDisplay(e.target.value);
+            });
+
+            generateBtn.addEventListener("click", generateArray);
+            
+            sortBtn.addEventListener("click", async () => {
+                if(isSorting) return;
+                setControlsState(true);
+                shouldStop = false;
+                await mergeSortWrapper();
+                if(!shouldStop) {
+                    setControlsState(false);
+                    explanationText.innerHTML = `<span class="text-emerald-400 font-bold">Hoàn tất!</span> Mảng đã được sắp xếp thành công.`;
+                }
+            });
+
+            resetBtn.addEventListener("click", () => {
+                shouldStop = true;
+                setControlsState(false);
+                generateArray();
+                explanationText.innerHTML = `Đã dừng và tạo mảng mới. Nhấn "Bắt đầu Sắp xếp" để thử lại.`;
+            });
+        }
+
+        function generateArray() {
+            if (isSorting) return;
+            
+            const size = parseInt(sizeSlider.value);
+            container.innerHTML = "";
+            array = [];
+            bars = [];
+
+            // Container height is 350px, leave some padding
+            const maxHeight = 300; 
+
+            for (let i = 0; i < size; i++) {
+                // Generate value between 10 and 100
+                const value = Math.floor(Math.random() * 90) + 10;
+                array.push(value);
+
+                const bar = document.createElement("div");
+                bar.classList.add("array-bar");
+                // Calculate height percentage relative to max possible value (100)
+                const heightPx = (value / 100) * maxHeight;
+                bar.style.height = `${heightPx}px`;
+                
+                // Adjust width based on size to fit container
+                const barWidth = Math.max(15, Math.floor(container.clientWidth / size) - 4); // 4px gap
+                bar.style.width = `${barWidth}px`;
+                
+                bar.textContent = value;
+                
+                container.appendChild(bar);
+                bars.push(bar);
+            }
+            
+            explanationText.innerHTML = `Mảng mới với ${size} phần tử đã được tạo. Sẵn sàng sắp xếp.`;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function setControlsState(sorting) {
+            isSorting = sorting;
+            generateBtn.disabled = sorting;
+            sizeSlider.disabled = sorting;
+            
+            if (sorting) {
+                sortBtn.classList.add("hidden");
+                resetBtn.classList.remove("hidden");
+            } else {
+                sortBtn.classList.remove("hidden");
+                resetBtn.classList.add("hidden");
+            }
+        }
+
+        async function mergeSortWrapper() {
+            explanationText.innerHTML = `Bắt đầu Merge Sort. Quá trình này sẽ đệ quy chia mảng thành các nửa cho đến khi độ dài là 1, sau đó gộp chúng lại theo thứ tự.`;
+            await sleep(delayTime);
+            
+            if(shouldStop) return;
+            
+            // Start the actual sort
+            await mergeSort(0, array.length - 1);
+            
+            if(shouldStop) return;
+
+            // Final green sweep
+            for(let i=0; i<bars.length; i++) {
+                if(shouldStop) return;
+                bars[i].style.backgroundColor = SORTED_COLOR;
+                await sleep(50); // fast sweep
+            }
+        }
+
+        async function mergeSort(left, right) {
+            if (shouldStop) return;
+            if (left >= right) {
+                return;
+            }
+
+            const mid = Math.floor(left + (right - left) / 2);
+
+            explanationText.innerHTML = `Chia mảng từ vị trí <span class="text-blue-400">[${left} đến ${right}]</span> tại điểm giữa <span class="text-blue-400">${mid}</span>.`;
+            
+            // Highlight current sub-array being divided
+            for(let i=left; i<=right; i++) {
+                bars[i].style.backgroundColor = PIVOT_COLOR;
+            }
+            await sleep(delayTime);
+            if (shouldStop) return;
+            
+            // Reset color
+            for(let i=left; i<=right; i++) {
+                bars[i].style.backgroundColor = DEFAULT_COLOR;
+            }
+
+            // Recursively sort left and right halves
+            await mergeSort(left, mid);
+            if (shouldStop) return;
+            
+            await mergeSort(mid + 1, right);
+            if (shouldStop) return;
+
+            // Merge the sorted halves
+            await merge(left, mid, right);
+        }
+
+        async function merge(left, mid, right) {
+            if (shouldStop) return;
+            
+            explanationText.innerHTML = `Gộp hai mảng con đã sắp xếp: <span class="text-yellow-400">[${left}..${mid}]</span> và <span class="text-yellow-400">[${mid+1}..${right}]</span>.`;
+
+            // Highlight the two halves being merged
+            for (let i = left; i <= mid; i++) bars[i].style.backgroundColor = COMPARING_COLOR;
+            for (let i = mid + 1; i <= right; i++) bars[i].style.backgroundColor = SORTING_COLOR;
+            
+            await sleep(delayTime);
+            if (shouldStop) return;
+
+            const n1 = mid - left + 1;
+            const n2 = right - mid;
+
+            // Create temp arrays
+            const leftArr = new Array(n1);
+            const rightArr = new Array(n2);
+
+            for (let i = 0; i < n1; i++) leftArr[i] = array[left + i];
+            for (let j = 0; j < n2; j++) rightArr[j] = array[mid + 1 + j];
+
+            let i = 0, j = 0, k = left;
+
+            // Merge temp arrays back into original array and update DOM
+            while (i < n1 && j < n2) {
+                if (shouldStop) return;
+
+                // Highlight currently comparing elements
+                // We know index in original array they conceptually correspond to, 
+                // but visually we are just pulling from temp arrays.
+                explanationText.innerHTML = `So sánh ${leftArr[i]} và ${rightArr[j]}. Chọn <span class="text-emerald-400">${leftArr[i] <= rightArr[j] ? leftArr[i] : rightArr[j]}</span>.`;
+                
+                bars[k].style.backgroundColor = 'white'; // Flash white to show write operation
+                await sleep(delayTime / 2);
+
+                if (leftArr[i] <= rightArr[j]) {
+                    array[k] = leftArr[i];
+                    i++;
+                } else {
+                    array[k] = rightArr[j];
+                    j++;
+                }
+                
+                // Update DOM height and text
+                const heightPx = (array[k] / 100) * 300;
+                bars[k].style.height = `${heightPx}px`;
+                bars[k].textContent = array[k];
+                
+                // Set to temporary sorted color for this merge phase
+                bars[k].style.backgroundColor = '#60a5fa'; // lighter blue
+                
+                k++;
+                await sleep(delayTime);
+            }
+
+            // Copy remaining elements of leftArr[] if any
+            while (i < n1) {
+                if (shouldStop) return;
+                explanationText.innerHTML = `Đưa phần tử còn lại <span class="text-emerald-400">${leftArr[i]}</span> từ nửa trái vào mảng.`;
+                
+                bars[k].style.backgroundColor = 'white';
+                await sleep(delayTime / 2);
+                
+                array[k] = leftArr[i];
+                const heightPx = (array[k] / 100) * 300;
+                bars[k].style.height = `${heightPx}px`;
+                bars[k].textContent = array[k];
+                bars[k].style.backgroundColor = '#60a5fa';
+                
+                i++; k++;
+                await sleep(delayTime);
+            }
+
+            // Copy remaining elements of rightArr[] if any
+            while (j < n2) {
+                if (shouldStop) return;
+                explanationText.innerHTML = `Đưa phần tử còn lại <span class="text-emerald-400">${rightArr[j]}</span> từ nửa phải vào mảng.`;
+                
+                bars[k].style.backgroundColor = 'white';
+                await sleep(delayTime / 2);
+                
+                array[k] = rightArr[j];
+                const heightPx = (array[k] / 100) * 300;
+                bars[k].style.height = `${heightPx}px`;
+                bars[k].textContent = array[k];
+                bars[k].style.backgroundColor = '#60a5fa';
+                
+                j++; k++;
+                await sleep(delayTime);
+            }
+            
+            // Reset colors of merged section back to default (until final sweep)
+            for(let x=left; x<=right; x++) {
+                 if (shouldStop) return;
+                 bars[x].style.backgroundColor = DEFAULT_COLOR;
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (isSorting) return; // Don't resize bars while sorting to avoid glitches
+            const size = parseInt(sizeSlider.value);
+            const barWidth = Math.max(15, Math.floor(container.clientWidth / size) - 4);
+            bars.forEach(bar => {
+                bar.style.width = `${barWidth}px`;
+            });
+        });
+
+        // Initialize on load
+        window.onload = init;
+    </script>
+</body>
+</html>

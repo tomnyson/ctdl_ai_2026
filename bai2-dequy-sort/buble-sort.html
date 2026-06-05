@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo thuật toán Bubble Sort</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ecfeff, #f8fafc);
+      color: #0f172a;
+      min-height: 100vh;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      padding: 28px;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+      color: #164e63;
+    }
+
+    .description {
+      text-align: center;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    button, input {
+      border: none;
+      border-radius: 12px;
+      padding: 11px 16px;
+      font-size: 15px;
+    }
+
+    input {
+      border: 1px solid #cbd5e1;
+      min-width: 280px;
+    }
+
+    button {
+      background: #0891b2;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+      font-weight: 600;
+    }
+
+    button:hover:not(:disabled) {
+      background: #0e7490;
+      transform: translateY(-1px);
+    }
+
+    .secondary {
+      background: #475569;
+    }
+
+    .secondary:hover:not(:disabled) {
+      background: #334155;
+    }
+
+    .danger {
+      background: #dc2626;
+    }
+
+    .danger:hover:not(:disabled) {
+      background: #b91c1c;
+    }
+
+    .visualizer {
+      height: 320px;
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      gap: 10px;
+      padding: 24px;
+      border-radius: 18px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      overflow-x: auto;
+    }
+
+    .bar-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: end;
+      height: 100%;
+      min-width: 42px;
+    }
+
+    .bar {
+      width: 36px;
+      min-height: 22px;
+      border-radius: 9px 9px 4px 4px;
+      background: #67e8f9;
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: bold;
+      padding-bottom: 6px;
+      transition: height 0.35s, background 0.35s, transform 0.35s;
+    }
+
+    .bar.compare {
+      background: #facc15;
+      transform: translateY(-8px);
+    }
+
+    .bar.swap {
+      background: #a78bfa;
+      color: white;
+      transform: translateY(-8px) scale(1.06);
+    }
+
+    .bar.sorted {
+      background: #22c55e;
+      color: white;
+    }
+
+    .index {
+      margin-top: 8px;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .status {
+      margin-top: 20px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 18px;
+      border-radius: 14px;
+      min-height: 74px;
+      line-height: 1.6;
+      font-family: Consolas, monospace;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 18px;
+      color: #475569;
+      font-size: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .cyan { background: #67e8f9; }
+    .yellow { background: #facc15; }
+    .purple { background: #a78bfa; }
+    .green { background: #22c55e; }
+
+    .code-box {
+      margin-top: 24px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 18px;
+      overflow-x: auto;
+    }
+
+    pre {
+      margin: 0;
+      color: #334155;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 14px;
+      }
+
+      .visualizer {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Demo thuật toán Bubble Sort</h1>
+    <p class="description">
+      Bubble Sort sắp xếp bằng cách so sánh hai phần tử liền kề.
+      Nếu phần tử bên trái lớn hơn phần tử bên phải, chúng sẽ được đổi chỗ.
+      Sau mỗi lượt, phần tử lớn nhất sẽ “nổi” về cuối mảng.
+    </p>
+
+    <div class="controls">
+      <input id="arrayInput" value="29, 10, 14, 37, 13, 5, 22" placeholder="Nhập mảng, ví dụ: 8, 3, 5, 1" />
+      <button onclick="loadArray()">Tải mảng</button>
+      <button onclick="randomArray()" class="secondary">Mảng ngẫu nhiên</button>
+      <button onclick="startAutoSort()">Chạy tự động</button>
+      <button onclick="nextStep()" class="secondary">Từng bước</button>
+      <button onclick="resetDemo()" class="danger">Reset</button>
+    </div>
+
+    <div id="visualizer" class="visualizer"></div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="dot cyan"></span> Bình thường</div>
+      <div class="legend-item"><span class="dot yellow"></span> Đang so sánh</div>
+      <div class="legend-item"><span class="dot purple"></span> Đang đổi chỗ</div>
+      <div class="legend-item"><span class="dot green"></span> Đã đúng vị trí</div>
+    </div>
+
+    <div id="status" class="status">Nhấn “Chạy tự động” hoặc “Từng bước” để bắt đầu.</div>
+
+    <div class="code-box">
+      <pre><code>function bubbleSort(arr) {
+  for (let i = 0; i < arr.length - 1; i++) {
+    for (let j = 0; j < arr.length - i - 1; j++) {
+      if (arr[j] > arr[j + 1]) {
+        let temp = arr[j];
+        arr[j] = arr[j + 1];
+        arr[j + 1] = temp;
+      }
+    }
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <script>
+    let arr = [];
+    let originalArr = [];
+    let steps = [];
+    let currentStep = 0;
+    let timer = null;
+
+    const visualizer = document.getElementById("visualizer");
+    const statusBox = document.getElementById("status");
+    const arrayInput = document.getElementById("arrayInput");
+
+    function loadArray() {
+      const values = arrayInput.value
+        .split(",")
+        .map(x => Number(x.trim()))
+        .filter(x => !Number.isNaN(x));
+
+      if (values.length < 2) {
+        statusBox.textContent = "Vui lòng nhập ít nhất 2 số, cách nhau bằng dấu phẩy.";
+        return;
+      }
+
+      arr = values;
+      originalArr = [...arr];
+      prepareSteps();
+      renderArray();
+      statusBox.textContent = "Đã tải mảng. Sẵn sàng chạy Bubble Sort.";
+    }
+
+    function randomArray() {
+      arr = Array.from({ length: 10 }, () => Math.floor(Math.random() * 90) + 10);
+      originalArr = [...arr];
+      arrayInput.value = arr.join(", ");
+      prepareSteps();
+      renderArray();
+      statusBox.textContent = "Đã tạo mảng ngẫu nhiên.";
+    }
+
+    function resetDemo() {
+      clearInterval(timer);
+      timer = null;
+      arr = [...originalArr];
+      prepareSteps();
+      renderArray();
+      statusBox.textContent = "Đã reset demo.";
+    }
+
+    function prepareSteps() {
+      clearInterval(timer);
+      timer = null;
+      steps = [];
+      currentStep = 0;
+
+      const temp = [...arr];
+      bubbleSortSteps(temp);
+
+      steps.push({
+        array: [...temp],
+        sorted: temp.map((_, index) => index),
+        message: "Hoàn tất! Mảng đã được sắp xếp tăng dần."
+      });
+    }
+
+    function bubbleSortSteps(a) {
+      const n = a.length;
+
+      for (let i = 0; i < n - 1; i++) {
+        let swapped = false;
+
+        steps.push({
+          array: [...a],
+          sorted: getSortedIndexes(n, i),
+          message: `Bắt đầu lượt ${i + 1}. Phần tử lớn nhất trong đoạn chưa sắp xếp sẽ nổi về bên phải.`
+        });
+
+        for (let j = 0; j < n - i - 1; j++) {
+          steps.push({
+            array: [...a],
+            compare: [j, j + 1],
+            sorted: getSortedIndexes(n, i),
+            message: `So sánh a[${j}] = ${a[j]} và a[${j + 1}] = ${a[j + 1]}.`
+          });
+
+          if (a[j] > a[j + 1]) {
+            [a[j], a[j + 1]] = [a[j + 1], a[j]];
+            swapped = true;
+
+            steps.push({
+              array: [...a],
+              swap: [j, j + 1],
+              sorted: getSortedIndexes(n, i),
+              message: `Vì ${a[j + 1]} > ${a[j]}, đổi chỗ hai phần tử.`
+            });
+          } else {
+            steps.push({
+              array: [...a],
+              compare: [j, j + 1],
+              sorted: getSortedIndexes(n, i),
+              message: `Không cần đổi chỗ vì ${a[j]} <= ${a[j + 1]}.`
+            });
+          }
+        }
+
+        steps.push({
+          array: [...a],
+          sorted: getSortedIndexes(n, i + 1),
+          message: `Kết thúc lượt ${i + 1}. Phần tử tại vị trí ${n - i - 1} đã đúng vị trí.`
+        });
+
+        if (!swapped) {
+          steps.push({
+            array: [...a],
+            sorted: a.map((_, index) => index),
+            message: "Không có lần đổi chỗ nào trong lượt này, mảng đã được sắp xếp sớm."
+          });
+          break;
+        }
+      }
+    }
+
+    function getSortedIndexes(n, completedPasses) {
+      const result = [];
+      for (let k = n - completedPasses; k < n; k++) {
+        if (k >= 0 && k < n) result.push(k);
+      }
+      return result;
+    }
+
+    function renderArray(options = {}) {
+      visualizer.innerHTML = "";
+      const max = Math.max(...arr, 1);
+
+      arr.forEach((value, index) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "bar-wrapper";
+
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.height = `${40 + (value / max) * 220}px`;
+        bar.textContent = value;
+
+        if (options.compare && options.compare.includes(index)) bar.classList.add("compare");
+        if (options.swap && options.swap.includes(index)) bar.classList.add("swap");
+        if (options.sorted && options.sorted.includes(index)) bar.classList.add("sorted");
+
+        const idx = document.createElement("div");
+        idx.className = "index";
+        idx.textContent = index;
+
+        wrapper.appendChild(bar);
+        wrapper.appendChild(idx);
+        visualizer.appendChild(wrapper);
+      });
+    }
+
+    function nextStep() {
+      if (steps.length === 0) prepareSteps();
+
+      if (currentStep >= steps.length) {
+        statusBox.textContent = "Demo đã chạy xong.";
+        return;
+      }
+
+      const step = steps[currentStep];
+      arr = [...step.array];
+      renderArray(step);
+      statusBox.textContent = `Bước ${currentStep + 1}/${steps.length}: ${step.message}`;
+      currentStep++;
+    }
+
+    function startAutoSort() {
+      clearInterval(timer);
+      if (currentStep >= steps.length) resetDemo();
+
+      timer = setInterval(() => {
+        if (currentStep >= steps.length) {
+          clearInterval(timer);
+          timer = null;
+          return;
+        }
+        nextStep();
+      }, 850);
+    }
+
+    loadArray();
+  </script>
+</body>
+</html>

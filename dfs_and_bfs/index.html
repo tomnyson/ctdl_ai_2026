@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DFS & BFS Visualization</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+      color: #f8fafc;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .controls label {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      align-self: center;
+    }
+
+    select, button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    select {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+    }
+
+    .btn-dfs  { background: #7c3aed; color: #fff; }
+    .btn-bfs  { background: #0891b2; color: #fff; }
+    .btn-reset { background: #334155; color: #e2e8f0; }
+
+    button:hover { filter: brightness(1.15); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .speed-wrap { display: flex; align-items: center; gap: 8px; }
+    input[type=range] { width: 100px; accent-color: #7c3aed; }
+
+    /* Main layout */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+
+    /* Canvas */
+    .canvas-wrap {
+      background: #1e293b;
+      border-radius: 14px;
+      border: 1px solid #334155;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas { display: block; width: 100%; }
+
+    /* Right panel */
+    .panel { display: flex; flex-direction: column; gap: 14px; }
+
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      padding: 14px;
+    }
+
+    .card h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+
+    /* Algorithm steps */
+    #steps-list {
+      list-style: none;
+      max-height: 200px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    #steps-list li {
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      background: #0f172a;
+      color: #94a3b8;
+      transition: all 0.3s;
+    }
+
+    #steps-list li.active {
+      background: #312e81;
+      color: #c7d2fe;
+      font-weight: 600;
+    }
+
+    #steps-list li.done {
+      background: #14532d;
+      color: #86efac;
+    }
+
+    /* Queue / Stack display */
+    .struct-display {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 36px;
+      align-items: center;
+    }
+
+    .struct-item {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      animation: pop-in 0.25s ease;
+    }
+
+    @keyframes pop-in {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+
+    /* Visited order */
+    #visited-order {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 36px;
+      align-items: center;
+    }
+
+    .visited-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      animation: pop-in 0.3s ease;
+    }
+
+    /* Status bar */
+    #status {
+      text-align: center;
+      padding: 10px;
+      background: #1e293b;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      font-size: 0.88rem;
+      color: #94a3b8;
+      min-height: 42px;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+
+    @media (max-width: 700px) {
+      .main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🔍 DFS & BFS Visualization</h1>
+  <p class="subtitle">Thuật toán duyệt đồ thị — Depth First Search & Breadth First Search</p>
+
+  <div class="controls">
+    <label>Bắt đầu từ:</label>
+    <select id="start-node">
+      <option>A</option><option>B</option><option>C</option>
+      <option>D</option><option>E</option><option>F</option>
+    </select>
+
+    <button class="btn-dfs"  id="btn-dfs"  onclick="startAlgo('DFS')">▶ DFS</button>
+    <button class="btn-bfs"  id="btn-bfs"  onclick="startAlgo('BFS')">▶ BFS</button>
+    <button class="btn-reset" onclick="reset()">↺ Reset</button>
+
+    <div class="speed-wrap">
+      <label>Tốc độ:</label>
+      <input type="range" id="speed" min="100" max="1500" value="700" step="100"/>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="canvas-wrap">
+      <canvas id="graph-canvas" width="640" height="420"></canvas>
+    </div>
+
+    <div class="panel">
+      <div id="status">Chọn thuật toán để bắt đầu.</div>
+
+      <div class="card">
+        <h3 id="struct-label">Stack / Queue</h3>
+        <div class="struct-display" id="struct-display"></div>
+      </div>
+
+      <div class="card">
+        <h3>Thứ tự duyệt</h3>
+        <div id="visited-order"></div>
+      </div>
+
+      <div class="card">
+        <h3>Các bước</h3>
+        <ul id="steps-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div> Chưa thăm</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Đang xét</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Đã thăm</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Nút bắt đầu</div>
+  </div>
+</div>
+
+<script>
+// ─── Graph definition ─────────────────────────────────────────────────────────
+const GRAPH = {
+  A: ['B', 'C'],
+  B: ['A', 'D', 'E'],
+  C: ['A', 'F'],
+  D: ['B'],
+  E: ['B', 'F'],
+  F: ['C', 'E'],
+};
+
+// Node positions (on 640×420 canvas)
+const POSITIONS = {
+  A: { x: 320, y: 60  },
+  B: { x: 160, y: 170 },
+  C: { x: 480, y: 170 },
+  D: { x:  80, y: 310 },
+  E: { x: 240, y: 310 },
+  F: { x: 480, y: 310 },
+};
+
+const NODE_COLOR   = '#6366f1';
+const ACTIVE_COLOR = '#f59e0b';
+const DONE_COLOR   = '#10b981';
+const START_COLOR  = '#ef4444';
+const EDGE_COLOR   = '#334155';
+const ACTIVE_EDGE  = '#f59e0b';
+
+const canvas = document.getElementById('graph-canvas');
+const ctx    = canvas.getContext('2d');
+
+// State
+let nodeState  = {}; // 'idle' | 'active' | 'done'
+let activeEdge = null;
+let animTimer  = null;
+let running    = false;
+
+function reset() {
+  clearTimeout(animTimer);
+  running = false;
+  nodeState  = {};
+  activeEdge = null;
+  Object.keys(GRAPH).forEach(n => nodeState[n] = 'idle');
+  document.getElementById('struct-display').innerHTML = '';
+  document.getElementById('visited-order').innerHTML  = '';
+  document.getElementById('steps-list').innerHTML     = '';
+  document.getElementById('status').textContent       = 'Chọn thuật toán để bắt đầu.';
+  document.getElementById('struct-label').textContent = 'Stack / Queue';
+  document.getElementById('btn-dfs').disabled = false;
+  document.getElementById('btn-bfs').disabled = false;
+  drawGraph();
+}
+
+// ─── Drawing ──────────────────────────────────────────────────────────────────
+function drawGraph() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Edges
+  const drawn = new Set();
+  for (const [u, neighbors] of Object.entries(GRAPH)) {
+    for (const v of neighbors) {
+      const key = [u, v].sort().join('-');
+      if (drawn.has(key)) continue;
+      drawn.add(key);
+
+      const isActive = activeEdge &&
+        ((activeEdge[0] === u && activeEdge[1] === v) ||
+         (activeEdge[0] === v && activeEdge[1] === u));
+
+      ctx.beginPath();
+      ctx.moveTo(POSITIONS[u].x, POSITIONS[u].y);
+      ctx.lineTo(POSITIONS[v].x, POSITIONS[v].y);
+      ctx.strokeStyle = isActive ? ACTIVE_EDGE : EDGE_COLOR;
+      ctx.lineWidth   = isActive ? 3 : 2;
+      ctx.stroke();
+    }
+  }
+
+  // Nodes
+  for (const [node, pos] of Object.entries(POSITIONS)) {
+    const state = nodeState[node] || 'idle';
+    const color = state === 'active' ? ACTIVE_COLOR
+                : state === 'done'   ? DONE_COLOR
+                : state === 'start'  ? START_COLOR
+                : NODE_COLOR;
+
+    // Glow
+    if (state === 'active') {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 28, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(245,158,11,0.2)';
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 22, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    ctx.font      = 'bold 16px Segoe UI';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node, pos.x, pos.y);
+  }
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+const BADGE_COLORS = ['#7c3aed','#0891b2','#059669','#dc2626','#d97706','#0284c7'];
+let badgeIdx = 0;
+
+function addVisited(node) {
+  const el = document.createElement('div');
+  el.className = 'visited-badge';
+  el.style.background = BADGE_COLORS[badgeIdx++ % BADGE_COLORS.length];
+  el.textContent = node;
+  document.getElementById('visited-order').appendChild(el);
+}
+
+function renderStruct(items, isDFS) {
+  const wrap = document.getElementById('struct-display');
+  wrap.innerHTML = '';
+  items.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'struct-item';
+    el.style.background = isDFS ? '#4c1d95' : '#0c4a6e';
+    el.style.color = '#fff';
+    el.textContent = item;
+    wrap.appendChild(el);
+  });
+}
+
+function addStep(text, state = '') {
+  const list = document.getElementById('steps-list');
+  // mark previous active as done
+  list.querySelectorAll('li.active').forEach(li => {
+    li.classList.remove('active');
+    li.classList.add('done');
+  });
+  const li = document.createElement('li');
+  li.textContent = text;
+  li.className = state;
+  list.appendChild(li);
+  li.scrollIntoView({ block: 'nearest' });
+}
+
+function setStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+function delay() {
+  const ms = 1600 - parseInt(document.getElementById('speed').value);
+  return new Promise(r => { animTimer = setTimeout(r, ms); });
+}
+
+// ─── Algorithms ──────────────────────────────────────────────────────────────
+async function startAlgo(type) {
+  reset();
+  running = true;
+  document.getElementById('btn-dfs').disabled = true;
+  document.getElementById('btn-bfs').disabled = true;
+
+  const start = document.getElementById('start-node').value;
+  const isDFS = type === 'DFS';
+
+  document.getElementById('struct-label').textContent = isDFS ? '📚 Stack (ngăn xếp)' : '📬 Queue (hàng đợi)';
+
+  nodeState[start] = 'start';
+  drawGraph();
+  setStatus(`Bắt đầu ${type} từ đỉnh "${start}"`);
+  addStep(`Khởi tạo — đỉnh bắt đầu: ${start}`, 'active');
+
+  const visited = new Set();
+
+  if (isDFS) {
+    await dfs(start, visited);
+  } else {
+    await bfs(start, visited);
+  }
+
+  activeEdge = null;
+  drawGraph();
+  setStatus(`✅ ${type} hoàn thành! Thứ tự: ${[...visited].join(' → ')}`);
+  addStep('Hoàn thành!', 'done');
+  document.getElementById('btn-dfs').disabled = false;
+  document.getElementById('btn-bfs').disabled = false;
+}
+
+// DFS iterative
+async function dfs(start, visited) {
+  const stack = [start];
+  renderStruct(stack, true);
+
+  while (stack.length > 0) {
+    if (!running) return;
+
+    const node = stack.pop();
+
+    if (visited.has(node)) {
+      renderStruct(stack, true);
+      addStep(`Pop "${node}" — đã thăm, bỏ qua`);
+      await delay();
+      continue;
+    }
+
+    visited.add(node);
+    nodeState[node] = 'active';
+    drawGraph();
+    setStatus(`Đang thăm đỉnh "${node}" — Stack: [${stack.join(', ')}]`);
+    addStep(`Thăm "${node}"`, 'active');
+    await delay();
+
+    addVisited(node);
+    nodeState[node] = 'done';
+
+    const neighbors = GRAPH[node].slice().reverse();
+    for (const nb of neighbors) {
+      if (!visited.has(nb)) {
+        stack.push(nb);
+        activeEdge = [node, nb];
+        drawGraph();
+        addStep(`  → Đẩy "${nb}" vào Stack`);
+        await delay();
+      }
+    }
+
+    activeEdge = null;
+    renderStruct(stack, true);
+    drawGraph();
+  }
+}
+
+// BFS
+async function bfs(start, visited) {
+  const queue = [start];
+  visited.add(start);
+  nodeState[start] = 'active';
+  renderStruct(queue, false);
+  drawGraph();
+
+  while (queue.length > 0) {
+    if (!running) return;
+
+    const node = queue.shift();
+    nodeState[node] = 'active';
+    drawGraph();
+    setStatus(`Đang thăm đỉnh "${node}" — Queue: [${queue.join(', ')}]`);
+    addStep(`Thăm "${node}"`, 'active');
+    await delay();
+
+    addVisited(node);
+    nodeState[node] = 'done';
+
+    for (const nb of GRAPH[node]) {
+      if (!visited.has(nb)) {
+        visited.add(nb);
+        queue.push(nb);
+        activeEdge = [node, nb];
+        nodeState[nb] = 'active';
+        drawGraph();
+        addStep(`  → Thêm "${nb}" vào Queue`);
+        renderStruct(queue, false);
+        await delay();
+        nodeState[nb] = 'idle';
+      }
+    }
+
+    activeEdge = null;
+    renderStruct(queue, false);
+    drawGraph();
+  }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+reset();
+</script>
+</body>
+</html>

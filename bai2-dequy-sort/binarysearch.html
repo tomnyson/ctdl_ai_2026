@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minh họa Tìm kiếm Nhị phân</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .array-box {
+            transition: all 0.4s ease;
+        }
+        /* Hiệu ứng nhấp nháy cho phần tử Mid */
+        @keyframes pulse-mid {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+        }
+        .is-mid {
+            animation: pulse-mid 1.5s infinite;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col text-slate-800">
+
+    <header class="bg-indigo-600 text-white p-6 shadow-md text-center">
+        <h1 class="text-3xl font-bold">Tìm Kiếm Nhị Phân (Binary Search)</h1>
+        <p class="mt-2 text-indigo-100">Minh họa thuật toán từng bước một</p>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-5xl">
+        <!-- Panel Điều khiển & Nhập liệu -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">Mảng đầu vào (cách nhau bởi dấu phẩy):</label>
+                    <input type="text" id="arrayInput" value="2, 5, 8, 12, 16, 23, 38, 56, 72, 91" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    <p class="text-xs text-slate-500 mt-1">*Mảng sẽ tự động được sắp xếp tăng dần.</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-grow">
+                        <label class="block text-sm font-semibold mb-2 text-slate-700">Số cần tìm (Target):</label>
+                        <input type="number" id="targetInput" value="23" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    </div>
+                    <div class="flex items-end">
+                        <button id="btnStart" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow transition duration-200 w-full h-[42px]">
+                            Bắt đầu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chú thích (Legend) -->
+        <div class="flex flex-wrap justify-center gap-6 mb-6 text-sm font-medium text-slate-600">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded bg-indigo-100 border-2 border-indigo-500"></div> <span>Trong khoảng tìm kiếm</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded bg-yellow-400 border-2 border-yellow-600"></div> <span>Mid (Đang kiểm tra)</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded bg-green-500 border-2 border-green-700"></div> <span>Đã tìm thấy (Found)</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded bg-slate-200 opacity-50"></div> <span>Đã loại bỏ</span>
+            </div>
+        </div>
+
+        <!-- Vùng vẽ mảng -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 min-h-[200px] flex items-center justify-center overflow-x-auto">
+            <div id="arrayContainer" class="flex flex-wrap justify-center gap-2 md:gap-4">
+                <!-- Các phần tử mảng sẽ được render ở đây bằng JS -->
+            </div>
+        </div>
+
+        <!-- Panel Log và Điều hướng -->
+        <div class="mt-8 bg-slate-900 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex-grow">
+                    <h3 class="text-lg font-semibold text-slate-300 mb-1">Trạng thái hiện tại:</h3>
+                    <p id="logMessage" class="text-xl text-yellow-400 font-mono">Nhấn "Bắt đầu" để tạo mảng và tìm kiếm.</p>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button id="btnPrev" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        &larr; Bước trước
+                    </button>
+                    <button id="btnNext" class="bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-2 px-6 rounded transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Bước tiếp &rarr;
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-center gap-8 text-sm font-mono bg-slate-800 p-4 rounded-lg">
+                <div class="text-center"><span class="text-slate-400 block mb-1">Left Index</span><span id="lblLeft" class="text-2xl font-bold text-indigo-300">-</span></div>
+                <div class="text-center"><span class="text-slate-400 block mb-1">Mid Index</span><span id="lblMid" class="text-2xl font-bold text-yellow-400">-</span></div>
+                <div class="text-center"><span class="text-slate-400 block mb-1">Right Index</span><span id="lblRight" class="text-2xl font-bold text-indigo-300">-</span></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // State variables
+        let array = [];
+        let target = null;
+        let searchSteps = [];
+        let currentStepIndex = -1;
+
+        // DOM Elements
+        const arrayContainer = document.getElementById('arrayContainer');
+        const arrayInput = document.getElementById('arrayInput');
+        const targetInput = document.getElementById('targetInput');
+        const btnStart = document.getElementById('btnStart');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnNext = document.getElementById('btnNext');
+        const logMessage = document.getElementById('logMessage');
+        const lblLeft = document.getElementById('lblLeft');
+        const lblMid = document.getElementById('lblMid');
+        const lblRight = document.getElementById('lblRight');
+
+        // Hàm tiện ích: Làm sạch và parse mảng từ chuỗi input
+        function parseArray(inputStr) {
+            return inputStr.split(',')
+                .map(item => parseInt(item.trim(), 10))
+                .filter(item => !isNaN(item))
+                .sort((a, b) => a - b); // Bắt buộc sắp xếp cho Binary Search
+        }
+
+        // Hàm tính toán trước các bước của Binary Search
+        function calculateSteps(arr, t) {
+            const steps = [];
+            let left = 0;
+            let right = arr.length - 1;
+
+            steps.push({
+                left: left, right: right, mid: null, status: 'start',
+                msg: `Bắt đầu tìm kiếm ${t}. Khoảng tìm kiếm: [0 ... ${right}]`
+            });
+
+            while (left <= right) {
+                let mid = Math.floor((left + right) / 2);
+                
+                // Bước: Tính Mid
+                steps.push({
+                    left: left, right: right, mid: mid, status: 'checking',
+                    msg: `Tính Mid = (${left} + ${right}) / 2 = ${mid}. Giá trị tại arr[${mid}] là ${arr[mid]}.`
+                });
+
+                if (arr[mid] === t) {
+                    // Bước: Tìm thấy
+                    steps.push({
+                        left: left, right: right, mid: mid, status: 'found',
+                        msg: `🎉 Thành công! ${t} == ${arr[mid]}. Đã tìm thấy tại vị trí (index) ${mid}.`
+                    });
+                    return steps;
+                } else if (arr[mid] < t) {
+                    // Bước: Target lớn hơn, dịch Left
+                    steps.push({
+                        left: left, right: right, mid: mid, status: 'less',
+                        msg: `Vì ${arr[mid]} < ${t}, ta loại bỏ nửa bên trái. Cập nhật Left = Mid + 1 = ${mid + 1}.`
+                    });
+                    left = mid + 1;
+                } else {
+                    // Bước: Target nhỏ hơn, dịch Right
+                    steps.push({
+                        left: left, right: right, mid: mid, status: 'greater',
+                        msg: `Vì ${arr[mid]} > ${t}, ta loại bỏ nửa bên phải. Cập nhật Right = Mid - 1 = ${mid - 1}.`
+                    });
+                    right = mid - 1;
+                }
+            }
+
+            // Bước: Không tìm thấy
+            steps.push({
+                left: left, right: right, mid: null, status: 'not_found',
+                msg: `Left (${left}) > Right (${right}). Khoảng tìm kiếm trống rỗng. Không tìm thấy ${t}.`
+            });
+
+            return steps;
+        }
+
+        // Hàm hiển thị mảng lên giao diện dựa vào state
+        function renderArray(stepData) {
+            arrayContainer.innerHTML = '';
+            
+            array.forEach((value, index) => {
+                const box = document.createElement('div');
+                box.className = 'array-box relative w-12 h-12 md:w-16 md:h-16 flex flex-col items-center justify-center rounded-lg border-2 font-bold text-lg shadow-sm';
+                
+                // Trạng thái mặc định (Bị loại bỏ)
+                let bgColor = 'bg-slate-100 text-slate-400 border-slate-200 opacity-50';
+                
+                if (stepData) {
+                    const inRange = index >= stepData.left && index <= stepData.right;
+                    const isMid = index === stepData.mid;
+                    const isFound = stepData.status === 'found' && isMid;
+
+                    if (isFound) {
+                        bgColor = 'bg-green-500 text-white border-green-600 scale-110 z-20 shadow-lg';
+                    } else if (isMid) {
+                        bgColor = 'bg-yellow-400 text-yellow-900 border-yellow-500 is-mid';
+                    } else if (inRange) {
+                        bgColor = 'bg-indigo-50 text-indigo-800 border-indigo-400';
+                    }
+                } else {
+                    // Khởi tạo ban đầu
+                    bgColor = 'bg-white text-slate-700 border-slate-300';
+                }
+
+                box.className += ` ${bgColor}`;
+                
+                // Giá trị phần tử
+                box.innerHTML = `<span>${value}</span>`;
+                
+                // Hiển thị Index nhỏ ở dưới
+                const indexLabel = document.createElement('div');
+                indexLabel.className = 'absolute -bottom-6 text-xs font-mono text-slate-400';
+                indexLabel.innerText = index;
+                box.appendChild(indexLabel);
+
+                // Gắn nhãn L, R, M
+                if (stepData) {
+                    let pointers = [];
+                    if (index === stepData.left) pointers.push('L');
+                    if (index === stepData.right) pointers.push('R');
+                    if (index === stepData.mid) pointers.push('M');
+                    
+                    if (pointers.length > 0) {
+                        const pointerLabel = document.createElement('div');
+                        pointerLabel.className = 'absolute -top-6 text-xs font-bold text-indigo-600 flex gap-1';
+                        pointerLabel.innerHTML = pointers.map(p => {
+                            let color = p === 'M' ? 'text-yellow-600' : 'text-indigo-600';
+                            return `<span class="${color}">${p}</span>`;
+                        }).join(',');
+                        box.appendChild(pointerLabel);
+                    }
+                }
+
+                arrayContainer.appendChild(box);
+            });
+        }
+
+        // Cập nhật text và trạng thái nút bấm
+        function updateUI() {
+            if (currentStepIndex < 0 || currentStepIndex >= searchSteps.length) return;
+            
+            const step = searchSteps[currentStepIndex];
+            
+            // Render mảng
+            renderArray(step);
+            
+            // Cập nhật text
+            logMessage.innerText = step.msg;
+            lblLeft.innerText = step.left !== null ? step.left : '-';
+            lblMid.innerText = step.mid !== null ? step.mid : '-';
+            lblRight.innerText = step.right !== null ? step.right : '-';
+
+            // Cập nhật trạng thái nút
+            btnPrev.disabled = currentStepIndex === 0;
+            btnNext.disabled = currentStepIndex === searchSteps.length - 1;
+
+            // Đổi màu log message nếu tìm thấy/không tìm thấy
+            if (step.status === 'found') {
+                logMessage.className = "text-xl text-green-400 font-mono font-bold";
+            } else if (step.status === 'not_found') {
+                logMessage.className = "text-xl text-red-400 font-mono";
+            } else {
+                logMessage.className = "text-xl text-yellow-400 font-mono";
+            }
+        }
+
+        // Xử lý sự kiện nút Bắt đầu
+        btnStart.addEventListener('click', () => {
+            const val = targetInput.value;
+            if (val === '') {
+                logMessage.innerText = "Vui lòng nhập số cần tìm!";
+                logMessage.className = "text-xl text-red-400 font-mono";
+                return;
+            }
+
+            array = parseArray(arrayInput.value);
+            // Gán lại mảng đã sort vào input để user thấy
+            arrayInput.value = array.join(', ');
+            
+            target = parseInt(val, 10);
+            
+            if (array.length === 0) {
+                logMessage.innerText = "Mảng không hợp lệ!";
+                logMessage.className = "text-xl text-red-400 font-mono";
+                return;
+            }
+
+            searchSteps = calculateSteps(array, target);
+            currentStepIndex = 0;
+            updateUI();
+        });
+
+        // Nút Bước tiếp theo
+        btnNext.addEventListener('click', () => {
+            if (currentStepIndex < searchSteps.length - 1) {
+                currentStepIndex++;
+                updateUI();
+            }
+        });
+
+        // Nút Bước trước đó
+        btnPrev.addEventListener('click', () => {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                updateUI();
+            }
+        });
+
+        // Khởi tạo hiển thị ban đầu
+        array = parseArray(arrayInput.value);
+        renderArray(null);
+
+    </script>
+</body>
+</html>
