@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Rabin-Karp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Đảm bảo giữ nguyên khoảng trắng cho code Python */
+        .code-line {
+            white-space: pre;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-800">
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Mô phỏng Thuật toán Rabin-Karp</h1>
+            <p class="text-slate-600">
+                Thuật toán tìm kiếm chuỗi sử dụng mã băm (hashing) để tăng tốc độ so sánh cửa sổ trượt.
+            </p>
+        </div>
+
+        <!-- Inputs & Controls -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Văn bản (Text)</label>
+                        <input 
+                            type="text" 
+                            id="textInput"
+                            value="GEEKS FOR GEEKS" 
+                            class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none uppercase"
+                            maxlength="25"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Mẫu cần tìm (Pattern)</label>
+                        <input 
+                            type="text" 
+                            id="patternInput"
+                            value="GEEK" 
+                            class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none uppercase"
+                            maxlength="10"
+                        />
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <button 
+                        id="resetBtn"
+                        class="flex items-center gap-1 bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-lg font-medium transition"
+                    >
+                        <i data-lucide="rotate-ccw" class="w-[18px] h-[18px]"></i> Làm lại
+                    </button>
+                    <button 
+                        id="prevBtn"
+                        class="flex items-center gap-1 bg-slate-200 hover:bg-slate-300 disabled:opacity-50 px-4 py-2 rounded-lg font-medium transition"
+                    >
+                        <i data-lucide="skip-back" class="w-[18px] h-[18px]"></i> Lùi
+                    </button>
+                    <button 
+                        id="playBtn"
+                        class="flex items-center gap-1 px-6 py-2 rounded-lg font-medium text-white transition bg-blue-600 hover:bg-blue-700"
+                    >
+                        <i data-lucide="play" class="w-[18px] h-[18px]"></i> Chạy tự động
+                    </button>
+                    <button 
+                        id="nextBtn"
+                        class="flex items-center gap-1 bg-slate-200 hover:bg-slate-300 disabled:opacity-50 px-4 py-2 rounded-lg font-medium transition"
+                    >
+                        Tiến <i data-lucide="skip-forward" class="w-[18px] h-[18px]"></i>
+                    </button>
+                    
+                    <div class="ml-auto flex items-center gap-2">
+                        <label class="text-sm text-slate-600">Tốc độ:</label>
+                        <input 
+                            type="range" min="100" max="2000" step="100" 
+                            id="speedInput"
+                            value="1300" 
+                            class="w-24 accent-blue-600"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 p-6 rounded-xl shadow-sm border border-blue-200 flex flex-col justify-center">
+                <h3 class="font-semibold text-blue-900 mb-3">Thông tin mã băm (Hash)</h3>
+                <div class="space-y-2 text-sm md:text-base text-blue-800">
+                    <p class="flex justify-between"><span>Hash (Pattern):</span> <strong id="hashPattern" class="text-lg">-</strong></p>
+                    <p class="flex justify-between"><span>Hash (Window):</span> <strong id="hashWindow" class="text-lg">-</strong></p>
+                    <div class="pt-2 mt-2 border-t border-blue-200">
+                        <p class="text-xs text-blue-600">Sử dụng q = 101, d = 256</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Status Message -->
+                <div id="statusMessage" class="p-4 rounded-lg border font-medium bg-white border-slate-200 text-slate-700">
+                    Trạng thái: Đang chờ...
+                </div>
+
+                <!-- Array Visualization -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-x-auto min-h-[250px]">
+                    <!-- Pattern -->
+                    <div class="mb-8">
+                        <span class="text-sm font-semibold text-slate-500 mb-2 block">Mẫu (Pattern):</span>
+                        <div id="patternContainer" class="flex gap-1">
+                            <!-- Rendered via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Text -->
+                    <div>
+                        <span class="text-sm font-semibold text-slate-500 mb-2 block">Văn bản (Text):</span>
+                        <div id="textContainer" class="flex flex-wrap gap-1 relative">
+                            <!-- Rendered via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Python Code Viewer -->
+            <div class="bg-[#1e1e1e] rounded-xl shadow-sm border border-slate-800 overflow-hidden flex flex-col">
+                <div class="bg-[#2d2d2d] px-4 py-2 border-b border-[#404040] flex justify-between items-center">
+                    <span class="text-slate-300 font-mono text-sm">rabin_karp.py</span>
+                    <div class="flex gap-1.5">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                </div>
+                <div id="codeContainer" class="p-4 overflow-y-auto font-mono text-xs md:text-sm text-slate-300 flex-1 leading-relaxed">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const pythonCode = [
+        /* 0*/ "def rabin_karp(text, pattern):",
+        /* 1*/ "    d = 256; q = 101",
+        /* 2*/ "    n = len(text); m = len(pattern)",
+        /* 3*/ "    h = pow(d, m-1) % q",
+        /* 4*/ "    p = 0; t = 0",
+        /* 5*/ "    for i in range(m):  # Tính Hash ban đầu",
+        /* 6*/ "        p = (d * p + ord(pattern[i])) % q",
+        /* 7*/ "        t = (d * t + ord(text[i])) % q",
+        /* 8*/ "    ",
+        /* 9*/ "    for i in range(n - m + 1):",
+        /*10*/ "        if p == t:  # So sánh mã băm",
+        /*11*/ "            match = True",
+        /*12*/ "            for j in range(m):  # Kiểm tra từng ký tự",
+        /*13*/ "                if text[i+j] != pattern[j]:",
+        /*14*/ "                    match = False",
+        /*15*/ "                    break",
+        /*16*/ "            if match:",
+        /*17*/ "                print(f'Tìm thấy tại {i}')",
+        /*18*/ "        ",
+        /*19*/ "        if i < n - m:  # Trượt cửa sổ, tính lại mã băm",
+        /*20*/ "            t = (d*(t - ord(text[i])*h) + ord(text[i+m])) % q",
+        /*21*/ "            if t < 0: t += q"
+        ];
+
+        let state = {
+            text: 'GEEKS FOR GEEKS',
+            pattern: 'GEEK',
+            steps: [],
+            currentStepIndex: 0,
+            isPlaying: false,
+            speed: 800,
+            interval: null
+        };
+
+        function generateSteps(text, pattern) {
+            const d = 256;
+            const q = 101;
+            const n = text.length;
+            const m = pattern.length;
+            let steps = [];
+
+            if (m === 0 || n < m) return steps;
+
+            let h = 1;
+            for (let i = 0; i < m - 1; i++) {
+                h = (h * d) % q;
+            }
+
+            let pHash = 0;
+            let tHash = 0;
+
+            steps.push({
+                type: 'INIT',
+                message: 'Khởi tạo: Tính mã băm cho chuỗi mẫu (Pattern) và cửa sổ đầu tiên của văn bản (Text).',
+                windowStart: 0,
+                patternHash: null,
+                windowHash: null,
+                found: [],
+                lines: [1, 2, 3, 4, 5, 6, 7]
+            });
+
+            pHash = 0;
+            tHash = 0;
+            for (let i = 0; i < m; i++) {
+                pHash = (d * pHash + pattern.charCodeAt(i)) % q;
+                tHash = (d * tHash + text.charCodeAt(i)) % q;
+            }
+
+            let foundList = [];
+
+            for (let i = 0; i <= n - m; i++) {
+                let windowStr = text.substring(i, i + m);
+                steps.push({
+                    type: 'COMPARE_HASH',
+                    message: `Kiểm tra vị trí ${i}: So sánh mã băm. Hash("${windowStr}") = ${tHash} | Hash("${pattern}") = ${pHash}`,
+                    windowStart: i,
+                    patternHash: pHash,
+                    windowHash: tHash,
+                    found: [...foundList],
+                    lines: [9, 10]
+                });
+
+                if (pHash === tHash) {
+                    let match = true;
+                    for (let j = 0; j < m; j++) {
+                        steps.push({
+                            type: 'COMPARE_CHAR',
+                            message: `Mã băm khớp! Kiểm tra ký tự: '${text[i + j]}' == '${pattern[j]}' ?`,
+                            windowStart: i,
+                            patternHash: pHash,
+                            windowHash: tHash,
+                            charIndex: j,
+                            found: [...foundList],
+                            lines: [11, 12, 13]
+                        });
+                        
+                        if (text[i + j] !== pattern[j]) {
+                            match = false;
+                            steps.push({
+                                type: 'COLLISION',
+                                message: `Khác nhau ('${text[i + j]}' != '${pattern[j]}'). Hiện tượng đụng độ mã băm (Spurious Hit)!`,
+                                windowStart: i,
+                                patternHash: pHash,
+                                windowHash: tHash,
+                                charIndex: j,
+                                found: [...foundList],
+                                lines: [14, 15]
+                            });
+                            break;
+                        }
+                    }
+                    if (match) {
+                        foundList.push(i);
+                        steps.push({
+                            type: 'MATCH',
+                            message: `Khớp hoàn toàn! Tìm thấy mẫu (Pattern) tại chỉ số ${i}.`,
+                            windowStart: i,
+                            patternHash: pHash,
+                            windowHash: tHash,
+                            found: [...foundList],
+                            lines: [16, 17]
+                        });
+                    }
+                } else {
+                    steps.push({
+                        type: 'MISMATCH',
+                        message: `Mã băm khác nhau (${tHash} != ${pHash}). Bỏ qua cửa sổ này.`,
+                        windowStart: i,
+                        patternHash: pHash,
+                        windowHash: tHash,
+                        found: [...foundList],
+                        lines: [10]
+                    });
+                }
+
+                if (i < n - m) {
+                    let oldChar = text.charCodeAt(i);
+                    let newChar = text.charCodeAt(i + m);
+                    let nextHash = (d * (tHash - oldChar * h) + newChar) % q;
+                    if (nextHash < 0) nextHash += q;
+
+                    steps.push({
+                        type: 'SLIDE',
+                        message: `Trượt cửa sổ: Loại bỏ '${text[i]}', thêm '${text[i + m]}'. Mã băm mới = ${nextHash}.`,
+                        windowStart: i + 1,
+                        patternHash: pHash,
+                        windowHash: nextHash,
+                        found: [...foundList],
+                        lines: [19, 20, 21]
+                    });
+                    tHash = nextHash;
+                }
+            }
+            
+            steps.push({
+                type: 'DONE',
+                message: `Thuật toán hoàn tất! Tìm thấy ${foundList.length} kết quả.`,
+                windowStart: -1,
+                patternHash: pHash,
+                windowHash: null,
+                found: [...foundList],
+                lines: []
+            });
+
+            return steps;
+        }
+
+        function init() {
+            lucide.createIcons();
+
+            document.getElementById('textInput').addEventListener('input', (e) => {
+                state.text = e.target.value.toUpperCase();
+                e.target.value = state.text;
+                resetSimulation();
+            });
+
+            document.getElementById('patternInput').addEventListener('input', (e) => {
+                state.pattern = e.target.value.toUpperCase();
+                e.target.value = state.pattern;
+                resetSimulation();
+            });
+
+            document.getElementById('speedInput').addEventListener('input', (e) => {
+                state.speed = 2100 - parseInt(e.target.value);
+                if (state.isPlaying) {
+                    stopAutoplay();
+                    startAutoplay();
+                }
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+            
+            document.getElementById('prevBtn').addEventListener('click', () => {
+                if (state.currentStepIndex > 0) {
+                    state.currentStepIndex--;
+                    render();
+                }
+            });
+
+            document.getElementById('nextBtn').addEventListener('click', () => {
+                if (state.currentStepIndex < state.steps.length - 1) {
+                    state.currentStepIndex++;
+                    render();
+                }
+            });
+
+            document.getElementById('playBtn').addEventListener('click', () => {
+                state.isPlaying = !state.isPlaying;
+                if (state.isPlaying) {
+                    if (state.currentStepIndex >= state.steps.length - 1) {
+                        state.currentStepIndex = 0;
+                    }
+                    startAutoplay();
+                } else {
+                    stopAutoplay();
+                }
+                render();
+            });
+
+            resetSimulation();
+        }
+
+        function resetSimulation() {
+            stopAutoplay();
+            state.steps = generateSteps(state.text, state.pattern);
+            state.currentStepIndex = 0;
+            state.isPlaying = false;
+            render();
+        }
+
+        function startAutoplay() {
+            state.interval = setInterval(() => {
+                if (state.currentStepIndex < state.steps.length - 1) {
+                    state.currentStepIndex++;
+                    render();
+                } else {
+                    stopAutoplay();
+                    state.isPlaying = false;
+                    render();
+                }
+            }, state.speed);
+        }
+
+        function stopAutoplay() {
+            if (state.interval) clearInterval(state.interval);
+            state.interval = null;
+        }
+
+        function render() {
+            if (state.steps.length === 0) return;
+            const step = state.steps[state.currentStepIndex];
+
+            // 1. Cập nhật Text Hash Info
+            document.getElementById('hashPattern').innerText = step.patternHash !== null ? step.patternHash : '-';
+            document.getElementById('hashWindow').innerText = step.windowHash !== null ? step.windowHash : '-';
+
+            // 2. Cập nhật Status Message
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.innerText = `Trạng thái (${state.currentStepIndex + 1}/${state.steps.length}): ${step.message || "Đang chờ..."}`;
+            statusEl.className = `p-4 rounded-lg border font-medium ${
+                step.type === 'MATCH' ? 'bg-green-100 border-green-300 text-green-800' :
+                step.type === 'COLLISION' ? 'bg-red-100 border-red-300 text-red-800' :
+                step.type === 'DONE' ? 'bg-purple-100 border-purple-300 text-purple-800' :
+                'bg-white border-slate-200 text-slate-700'
+            }`;
+
+            // 3. Cập nhật trạng thái Button
+            document.getElementById('prevBtn').disabled = state.currentStepIndex === 0;
+            document.getElementById('nextBtn').disabled = state.currentStepIndex >= state.steps.length - 1;
+
+            const playBtn = document.getElementById('playBtn');
+            if (state.isPlaying) {
+                playBtn.innerHTML = '<i data-lucide="pause" class="w-[18px] h-[18px]"></i> Tạm dừng';
+                playBtn.className = 'flex items-center gap-1 px-6 py-2 rounded-lg font-medium text-white transition bg-amber-500 hover:bg-amber-600';
+            } else {
+                playBtn.innerHTML = '<i data-lucide="play" class="w-[18px] h-[18px]"></i> Chạy tự động';
+                playBtn.className = 'flex items-center gap-1 px-6 py-2 rounded-lg font-medium text-white transition bg-blue-600 hover:bg-blue-700';
+            }
+
+            // 4. Render Pattern
+            const patternContainer = document.getElementById('patternContainer');
+            patternContainer.innerHTML = '';
+            state.pattern.split('').forEach((char, idx) => {
+                let isComparing = step.type === 'COMPARE_CHAR' || step.type === 'COLLISION';
+                let isThisChar = isComparing && step.charIndex === idx;
+
+                let div = document.createElement('div');
+                div.className = `w-10 h-10 flex flex-col items-center justify-center border-2 rounded font-bold transition-all duration-200 `;
+                
+                if (isThisChar && step.type === 'COLLISION') {
+                    div.className += 'bg-red-400 text-white border-red-500';
+                } else if (isThisChar) {
+                    div.className += 'bg-yellow-300 border-yellow-500 text-black';
+                } else {
+                    div.className += 'bg-slate-100 border-slate-300 text-slate-700';
+                }
+                div.innerText = char;
+                patternContainer.appendChild(div);
+            });
+
+            // 5. Render Text
+            const textContainer = document.getElementById('textContainer');
+            textContainer.innerHTML = '';
+            state.text.split('').forEach((char, index) => {
+                let isWindow = step.windowStart !== -1 && index >= step.windowStart && index < step.windowStart + state.pattern.length;
+                let isComparing = (step.type === 'COMPARE_CHAR' || step.type === 'COLLISION') && index === step.windowStart + step.charIndex;
+                let isPartOfMatch = step.found && step.found.some(start => index >= start && index < start + state.pattern.length);
+
+                let bgColor = "bg-white";
+                let borderColor = "border-slate-200";
+                let zIndex = "z-0";
+                let textColor = "text-slate-800";
+
+                if (isPartOfMatch) {
+                    bgColor = "bg-green-100";
+                    borderColor = "border-green-400";
+                }
+
+                if (isWindow) {
+                    zIndex = "z-10 shadow-md";
+                    if (step.type === 'COMPARE_HASH') { bgColor = "bg-blue-100"; borderColor = "border-blue-500 border-2"; }
+                    if (step.type === 'MISMATCH') { bgColor = "bg-slate-200"; borderColor = "border-slate-400 border-2"; textColor = "text-slate-500"; }
+                    if (step.type === 'MATCH') { bgColor = "bg-green-300"; borderColor = "border-green-600 border-2"; }
+                    if (step.type === 'SLIDE') { bgColor = "bg-amber-100"; borderColor = "border-amber-400 border-2"; }
+                }
+
+                if (isComparing) {
+                    bgColor = step.type === 'COLLISION' ? "bg-red-500" : "bg-yellow-300";
+                    borderColor = step.type === 'COLLISION' ? "border-red-600 border-2" : "border-yellow-500 border-2";
+                    textColor = step.type === 'COLLISION' ? "text-white" : "text-black";
+                }
+
+                let div = document.createElement('div');
+                div.className = `w-10 h-12 flex flex-col items-center justify-center border rounded transition-all duration-200 ${bgColor} ${borderColor} ${textColor} ${zIndex}`;
+                
+                let indexSpanColor = (step.type === 'COLLISION' && isComparing) ? 'text-white/80' : 'text-slate-400';
+                div.innerHTML = `<span class="text-lg font-bold">${char}</span><span class="text-[10px] ${indexSpanColor} -mt-1">${index}</span>`;
+                textContainer.appendChild(div);
+            });
+
+            // 6. Render Code (Python)
+            const codeContainer = document.getElementById('codeContainer');
+            codeContainer.innerHTML = '';
+            pythonCode.forEach((line, idx) => {
+                let isActive = step.lines && step.lines.includes(idx);
+                
+                let div = document.createElement('div');
+                div.className = `code-line px-2 py-0.5 rounded ${isActive ? 'bg-blue-600/40 text-blue-100 border-l-2 border-blue-400' : 'border-l-2 border-transparent'}`;
+                
+                let numSpan = document.createElement('span');
+                numSpan.className = 'text-slate-600 mr-4 select-none w-4 inline-block text-right';
+                numSpan.innerText = idx;
+
+                let textSpan = document.createElement('span');
+                textSpan.className = isActive ? 'text-white' : '';
+                textSpan.innerText = line;
+
+                div.appendChild(numSpan);
+                div.appendChild(textSpan);
+                codeContainer.appendChild(div);
+            });
+
+            // Render lại các biểu tượng của Lucide vì ta đã cập nhật innerHTML của Button
+            lucide.createIcons();
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

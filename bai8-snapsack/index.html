@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knapsack Visualizer - 0/1 DP</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #18202f;
+      --muted: #687083;
+      --border: #dde2ee;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --green: #16a34a;
+      --red: #dc2626;
+      --yellow: #f59e0b;
+      --purple: #7c3aed;
+      --cell: #ffffff;
+      --cell-head: #eff4ff;
+      --cell-current: #fde68a;
+      --cell-from: #dbeafe;
+      --cell-take: #dcfce7;
+      --cell-skip: #fee2e2;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 32rem),
+        radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 28rem),
+        var(--bg);
+    }
+
+    .app {
+      width: min(1280px, calc(100% - 32px));
+      margin: 24px auto 48px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 44px);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #344054;
+      margin-bottom: 7px;
+    }
+
+    input, textarea, button, select {
+      font: inherit;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 11px 12px;
+      outline: none;
+      transition: 0.18s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    textarea {
+      min-height: 165px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 7px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 13px;
+      padding: 10px 13px;
+      cursor: pointer;
+      font-weight: 800;
+      color: #fff;
+      background: var(--primary);
+      transition: transform .12s ease, background .12s ease, opacity .12s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 40px;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: var(--primary-dark);
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .secondary {
+      color: #223047;
+      background: #e9edf6;
+    }
+
+    .secondary:hover {
+      background: #dce3f1;
+    }
+
+    .success {
+      background: var(--green);
+    }
+
+    .success:hover {
+      background: #15803d;
+    }
+
+    .danger {
+      background: var(--red);
+    }
+
+    .danger:hover {
+      background: #b91c1c;
+    }
+
+    .warning {
+      background: var(--yellow);
+    }
+
+    .warning:hover {
+      background: #d97706;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .speed-box {
+      grid-column: span 2;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 15px;
+    }
+
+    .speed-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      box-shadow: none;
+      border: 0;
+      accent-color: var(--primary);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 74px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 7px;
+    }
+
+    .stat strong {
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+
+    .visual-area {
+      padding: 16px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .explain {
+      background: #0f172a;
+      color: #e5e7eb;
+      border-radius: 18px;
+      padding: 15px;
+      min-height: 142px;
+      overflow: hidden;
+    }
+
+    .explain h3 {
+      margin: 0 0 8px;
+      color: #fff;
+      font-size: 15px;
+    }
+
+    .explain p {
+      margin: 7px 0;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .formula {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 10px;
+      color: #ffffff;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .legend {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .legend h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      color: #475467;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 1px solid rgba(15,23,42,0.12);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fff;
+      max-height: 570px;
+    }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: max-content;
+      min-width: 100%;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th, td {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      min-width: 54px;
+      height: 44px;
+      text-align: center;
+      padding: 6px;
+      position: relative;
+    }
+
+    th {
+      background: var(--cell-head);
+      font-size: 12px;
+      color: #344054;
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+
+    th:first-child {
+      left: 0;
+      z-index: 4;
+    }
+
+    td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: #f8fafc;
+      font-size: 12px;
+      color: #344054;
+      min-width: 128px;
+      font-weight: 800;
+      text-align: left;
+    }
+
+    td {
+      background: var(--cell);
+      font-weight: 800;
+      transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+
+    .cell-current {
+      background: var(--cell-current) !important;
+      transform: scale(1.04);
+      z-index: 5;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+    }
+
+    .cell-from {
+      background: var(--cell-from) !important;
+    }
+
+    .cell-take {
+      background: var(--cell-take) !important;
+    }
+
+    .cell-skip {
+      background: var(--cell-skip) !important;
+    }
+
+    .cell-final {
+      background: #ede9fe !important;
+      box-shadow: inset 0 0 0 2px var(--purple);
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    .items-table th, .items-table td {
+      position: static;
+      min-width: 0;
+      height: auto;
+      border: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      background: #fff;
+      font-weight: 650;
+    }
+
+    .items-table th {
+      background: #f1f5f9;
+      color: #344054;
+    }
+
+    .picked {
+      background: #dcfce7 !important;
+      color: #14532d;
+    }
+
+    .timeline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 13px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    progress {
+      width: 100%;
+      height: 12px;
+      border: 0;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    progress::-webkit-progress-bar {
+      background: #e5e7eb;
+      border-radius: 99px;
+    }
+
+    progress::-webkit-progress-value {
+      background: var(--primary);
+      border-radius: 99px;
+    }
+
+    progress::-moz-progress-bar {
+      background: var(--primary);
+      border-radius: 99px;
+    }
+
+    .error {
+      display: none;
+      margin-top: 12px;
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 900;
+      background: #eef2ff;
+      color: #3730a3;
+      margin-left: 7px;
+    }
+
+
+    .code-card {
+      margin-top: 18px;
+      padding: 18px;
+    }
+
+    .code-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .code-head h2 {
+      margin: 0 0 7px;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .code-head p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 620px;
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid #1f2937;
+      background: #0b1020;
+      color: #e5e7eb;
+      padding: 18px;
+      line-height: 1.55;
+      font-size: 13px;
+      tab-size: 4;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    @media (max-width: 980px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .speed-box {
+        grid-column: span 2;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app {
+        width: min(100% - 20px, 1280px);
+        margin-top: 14px;
+      }
+
+      header {
+        display: block;
+      }
+
+      .form-row,
+      .stats,
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .speed-box {
+        grid-column: span 1;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Knapsack Visualizer <span class="badge">0/1 DP</span></h1>
+        <p class="subtitle">
+          Minh hoạ thuật toán cái túi bằng bảng quy hoạch động. Có thể chạy từng bước,
+          chạy tự động, lùi bước, chỉnh tốc độ và xem các ô được dùng trong công thức.
+        </p>
+      </div>
+    </header>
+
+    <section class="grid">
+      <aside class="card panel">
+        <h2>1. Dữ liệu đầu vào</h2>
+
+        <div class="form-row">
+          <div>
+            <label for="capacity">Sức chứa balo W</label>
+            <input id="capacity" type="number" min="1" max="80" value="10" />
+          </div>
+          <div>
+            <label for="example">Ví dụ nhanh</label>
+            <select id="example">
+              <option value="default">Bộ mặc định</option>
+              <option value="small">Bộ nhỏ</option>
+              <option value="medium">Bộ trung bình</option>
+              <option value="tie">Có trường hợp bằng nhau</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="itemsInput">Danh sách vật phẩm</label>
+        <textarea id="itemsInput" spellcheck="false">A,2,3
+B,3,4
+C,4,5
+D,5,8
+E,9,10</textarea>
+        <div class="hint">
+          Mỗi dòng: <b>Tên, Trọng lượng, Giá trị</b>. Ví dụ: <code>A,2,3</code>.
+          Bài toán dùng dạng 0/1: mỗi vật phẩm chỉ được lấy tối đa 1 lần.
+        </div>
+
+        <div class="btn-row">
+          <button id="buildBtn">Tạo bảng</button>
+          <button id="resetBtn" class="secondary">Reset</button>
+        </div>
+
+        <div id="errorBox" class="error"></div>
+
+        <h2 style="margin-top:20px;">2. Vật phẩm</h2>
+        <div id="itemsBox"></div>
+      </aside>
+
+      <section class="card">
+        <div class="controls">
+          <button id="prevBtn" class="secondary">← Lùi</button>
+          <button id="stepBtn">Từng bước</button>
+          <button id="playBtn" class="success">▶ Chạy</button>
+          <button id="finishBtn" class="warning">Chạy hết</button>
+          <button id="clearBtn" class="danger">Xoá trạng thái</button>
+
+          <div class="speed-box">
+            <div class="speed-top">
+              <span>Tốc độ chạy</span>
+              <span id="speedText">700 ms/bước</span>
+            </div>
+            <input id="speed" type="range" min="80" max="1800" value="700" step="20" />
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <span>Bước hiện tại</span>
+            <strong id="stepStat">0 / 0</strong>
+          </div>
+          <div class="stat">
+            <span>Ô đang xét</span>
+            <strong id="cellStat">—</strong>
+          </div>
+          <div class="stat">
+            <span>Giá trị tối ưu</span>
+            <strong id="bestStat">0</strong>
+          </div>
+          <div class="stat">
+            <span>Trọng lượng lấy</span>
+            <strong id="weightStat">0</strong>
+          </div>
+        </div>
+
+        <div class="visual-area">
+          <div class="info-grid">
+            <div class="explain">
+              <h3>Giải thích bước</h3>
+              <p id="explainText">Nhấn “Tạo bảng”, sau đó dùng “Từng bước” hoặc “Chạy”.</p>
+              <div class="formula" id="formulaText">dp[i][w] = max(dp[i-1][w], dp[i-1][w-weight[i]] + value[i])</div>
+            </div>
+
+            <div class="legend">
+              <h3>Chú thích màu</h3>
+              <div class="legend-item"><span class="swatch" style="background: var(--cell-current);"></span>Ô đang tính dp[i][w]</div>
+              <div class="legend-item"><span class="swatch" style="background: var(--cell-skip);"></span>Không lấy vật phẩm: dp[i-1][w]</div>
+              <div class="legend-item"><span class="swatch" style="background: var(--cell-take);"></span>Lấy vật phẩm: dp[i-1][w-weight] + value</div>
+              <div class="legend-item"><span class="swatch" style="background: #ede9fe;"></span>Ô kết quả cuối cùng</div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table id="dpTable"></table>
+          </div>
+
+          <div class="timeline">
+            <span>Tiến độ</span>
+            <progress id="progress" value="0" max="100"></progress>
+            <span id="progressText">0%</span>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="card code-card">
+      <div class="code-head">
+        <div>
+          <h2>Code Python tương ứng</h2>
+          <p>
+            Đoạn code dưới đây là bản Python của thuật toán 0/1 Knapsack đang được visualizer mô phỏng.
+          </p>
+        </div>
+        <button id="copyCodeBtn" class="secondary">Copy code</button>
+      </div>
+      <pre><code id="pythonCode">def knapsack_01(items, capacity):
+    &quot;&quot;&quot;
+    items: list tuple dạng (name, weight, value)
+    capacity: sức chứa tối đa của balo
+
+    Trả về:
+    - best_value: giá trị tối ưu
+    - picked_items: danh sách vật phẩm được chọn
+    - dp: bảng quy hoạch động
+    &quot;&quot;&quot;
+    n = len(items)
+
+    # dp[i][w] = giá trị lớn nhất khi xét i vật phẩm đầu tiên
+    # với sức chứa hiện tại là w
+    dp = [[0] * (capacity + 1) for _ in range(n + 1)]
+
+    # Tạo bảng DP
+    for i in range(1, n + 1):
+        name, weight, value = items[i - 1]
+
+        for w in range(capacity + 1):
+            # Trường hợp 1: không lấy vật phẩm i
+            skip = dp[i - 1][w]
+
+            # Trường hợp 2: lấy vật phẩm i nếu đủ sức chứa
+            take = float(&quot;-inf&quot;)
+            if weight &lt;= w:
+                take = dp[i - 1][w - weight] + value
+
+            dp[i][w] = max(skip, take)
+
+    # Truy vết để tìm vật phẩm được chọn
+    picked_items = []
+    w = capacity
+
+    for i in range(n, 0, -1):
+        if dp[i][w] != dp[i - 1][w]:
+            name, weight, value = items[i - 1]
+            picked_items.append((name, weight, value))
+            w -= weight
+
+    picked_items.reverse()
+    best_value = dp[n][capacity]
+
+    return best_value, picked_items, dp
+
+
+def print_dp_table(items, capacity, dp):
+    &quot;&quot;&quot;In bảng DP ra terminal.&quot;&quot;&quot;
+    header = [&quot;i/w&quot;] + list(range(capacity + 1))
+    print(&quot;\t&quot;.join(map(str, header)))
+
+    for i, row in enumerate(dp):
+        if i == 0:
+            label = &quot;0&quot;
+        else:
+            label = items[i - 1][0]
+
+        print(label, end=&quot;\t&quot;)
+        print(&quot;\t&quot;.join(map(str, row)))
+
+
+if __name__ == &quot;__main__&quot;:
+    items = [
+        (&quot;A&quot;, 2, 3),
+        (&quot;B&quot;, 3, 4),
+        (&quot;C&quot;, 4, 5),
+        (&quot;D&quot;, 5, 8),
+        (&quot;E&quot;, 9, 10),
+    ]
+
+    capacity = 10
+
+    best_value, picked_items, dp = knapsack_01(items, capacity)
+
+    print(&quot;Gia tri toi uu:&quot;, best_value)
+    print(&quot;Vat pham duoc chon:&quot;)
+    for name, weight, value in picked_items:
+        print(f&quot;- {name}: weight={weight}, value={value}&quot;)
+
+    print(&quot;\nBang DP:&quot;)
+    print_dp_table(items, capacity, dp)
+</code></pre>
+    </section>
+  </main>
+
+  <script>
+    const examples = {
+      default: {
+        capacity: 10,
+        items: "A,2,3\nB,3,4\nC,4,5\nD,5,8\nE,9,10"
+      },
+      small: {
+        capacity: 7,
+        items: "Laptop,3,9\nSách,2,5\nÁo,1,3\nMáy ảnh,4,10"
+      },
+      medium: {
+        capacity: 15,
+        items: "A,1,1\nB,3,4\nC,4,5\nD,5,7\nE,7,10\nF,8,11"
+      },
+      tie: {
+        capacity: 8,
+        items: "A,2,4\nB,4,8\nC,4,8\nD,6,12"
+      }
+    };
+
+    const els = {
+      capacity: document.getElementById("capacity"),
+      example: document.getElementById("example"),
+      itemsInput: document.getElementById("itemsInput"),
+      buildBtn: document.getElementById("buildBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      prevBtn: document.getElementById("prevBtn"),
+      stepBtn: document.getElementById("stepBtn"),
+      playBtn: document.getElementById("playBtn"),
+      finishBtn: document.getElementById("finishBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      speed: document.getElementById("speed"),
+      speedText: document.getElementById("speedText"),
+      errorBox: document.getElementById("errorBox"),
+      itemsBox: document.getElementById("itemsBox"),
+      dpTable: document.getElementById("dpTable"),
+      explainText: document.getElementById("explainText"),
+      formulaText: document.getElementById("formulaText"),
+      stepStat: document.getElementById("stepStat"),
+      cellStat: document.getElementById("cellStat"),
+      bestStat: document.getElementById("bestStat"),
+      weightStat: document.getElementById("weightStat"),
+      progress: document.getElementById("progress"),
+      progressText: document.getElementById("progressText")
+    };
+
+    let items = [];
+    let capacity = 0;
+    let dp = [];
+    let steps = [];
+    let currentStep = 0;
+    let timer = null;
+    let isPlaying = false;
+    let selectedNames = [];
+
+    function parseItems() {
+      const raw = els.itemsInput.value.trim();
+      if (!raw) throw new Error("Bạn chưa nhập vật phẩm.");
+
+      const parsed = raw.split(/\n+/).map((line, idx) => {
+        const parts = line.split(",").map(x => x.trim());
+        if (parts.length !== 3) {
+          throw new Error(`Dòng ${idx + 1} sai định dạng. Đúng: Tên, Trọng lượng, Giá trị.`);
+        }
+
+        const name = parts[0] || `Item ${idx + 1}`;
+        const weight = Number(parts[1]);
+        const value = Number(parts[2]);
+
+        if (!Number.isFinite(weight) || !Number.isFinite(value)) {
+          throw new Error(`Dòng ${idx + 1}: trọng lượng và giá trị phải là số.`);
+        }
+        if (weight <= 0 || value < 0 || !Number.isInteger(weight) || !Number.isInteger(value)) {
+          throw new Error(`Dòng ${idx + 1}: trọng lượng phải là số nguyên dương, giá trị là số nguyên không âm.`);
+        }
+
+        return { name, weight, value };
+      });
+
+      if (parsed.length > 25) {
+        throw new Error("Nên dùng tối đa 25 vật phẩm để bảng dễ quan sát.");
+      }
+
+      return parsed;
+    }
+
+    function parseCapacity() {
+      const W = Number(els.capacity.value);
+      if (!Number.isInteger(W) || W <= 0) {
+        throw new Error("Sức chứa balo phải là số nguyên dương.");
+      }
+      if (W > 80) {
+        throw new Error("Sức chứa tối đa nên là 80 để trình duyệt không bị quá tải.");
+      }
+      return W;
+    }
+
+    function showError(message) {
+      els.errorBox.style.display = "block";
+      els.errorBox.textContent = message;
+    }
+
+    function clearError() {
+      els.errorBox.style.display = "none";
+      els.errorBox.textContent = "";
+    }
+
+    function computeSteps() {
+      dp = Array.from({ length: items.length + 1 }, () => Array(capacity + 1).fill(0));
+      steps = [];
+
+      for (let i = 1; i <= items.length; i++) {
+        const item = items[i - 1];
+
+        for (let w = 0; w <= capacity; w++) {
+          const skip = dp[i - 1][w];
+          let take = -Infinity;
+          let sourceTakeW = null;
+
+          if (item.weight <= w) {
+            sourceTakeW = w - item.weight;
+            take = dp[i - 1][sourceTakeW] + item.value;
+          }
+
+          const best = Math.max(skip, take);
+          const decision = take > skip ? "take" : "skip";
+          dp[i][w] = best;
+
+          steps.push({
+            i,
+            w,
+            item,
+            skip,
+            take,
+            sourceTakeW,
+            best,
+            decision,
+            snapshot: dp.map(row => [...row])
+          });
+        }
+      }
+    }
+
+    function renderItems() {
+      const rows = items.map((item, idx) => {
+        const cls = selectedNames.includes(item.name) ? "picked" : "";
+        return `<tr class="${cls}">
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${item.weight}</td>
+          <td>${item.value}</td>
+        </tr>`;
+      }).join("");
+
+      els.itemsBox.innerHTML = `
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tên</th>
+              <th>W</th>
+              <th>V</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function renderTable(snapshot = null) {
+      const data = snapshot || Array.from({ length: items.length + 1 }, () => Array(capacity + 1).fill(0));
+      let html = "<thead><tr><th>i / w</th>";
+
+      for (let w = 0; w <= capacity; w++) {
+        html += `<th>${w}</th>`;
+      }
+      html += "</tr></thead><tbody>";
+
+      for (let i = 0; i <= items.length; i++) {
+        const label = i === 0 ? "0 item" : `${i}: ${escapeHtml(items[i - 1].name)}`;
+        html += `<tr><td>${label}</td>`;
+
+        for (let w = 0; w <= capacity; w++) {
+          html += `<td id="cell-${i}-${w}">${data[i][w]}</td>`;
+        }
+
+        html += "</tr>";
+      }
+
+      html += "</tbody>";
+      els.dpTable.innerHTML = html;
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll(".cell-current,.cell-from,.cell-take,.cell-skip,.cell-final").forEach(cell => {
+        cell.classList.remove("cell-current", "cell-from", "cell-take", "cell-skip", "cell-final");
+      });
+    }
+
+    function highlightCell(i, w, className) {
+      const cell = document.getElementById(`cell-${i}-${w}`);
+      if (cell) cell.classList.add(className);
+    }
+
+    function showStep(index) {
+      clearHighlights();
+
+      if (index <= 0) {
+        currentStep = 0;
+        selectedNames = [];
+        renderItems();
+        renderTable();
+        updateStats();
+        els.explainText.textContent = "Bảng đang ở trạng thái ban đầu. Nhấn “Từng bước” hoặc “Chạy” để bắt đầu.";
+        els.formulaText.textContent = "dp[i][w] = max(dp[i-1][w], dp[i-1][w-weight[i]] + value[i])";
+        return;
+      }
+
+      currentStep = Math.min(index, steps.length);
+      const step = steps[currentStep - 1];
+
+      renderTable(step.snapshot);
+      clearHighlights();
+
+      highlightCell(step.i, step.w, "cell-current");
+      highlightCell(step.i - 1, step.w, "cell-skip");
+
+      if (step.sourceTakeW !== null) {
+        highlightCell(step.i - 1, step.sourceTakeW, "cell-take");
+      }
+
+      if (currentStep === steps.length) {
+        highlightCell(items.length, capacity, "cell-final");
+        selectedNames = reconstructSelection(step.snapshot);
+      } else {
+        selectedNames = [];
+      }
+
+      renderItems();
+      updateExplanation(step);
+      updateStats();
+      scrollCellIntoView(step.i, step.w);
+    }
+
+    function updateExplanation(step) {
+      const item = step.item;
+      const canTake = step.sourceTakeW !== null;
+
+      if (!canTake) {
+        els.explainText.innerHTML = `
+          Đang xét <b>${escapeHtml(item.name)}</b> tại sức chứa <b>w = ${step.w}</b>.
+          Vì trọng lượng vật phẩm là <b>${item.weight}</b> lớn hơn ${step.w}, không thể lấy vật phẩm này.
+          Do đó <b>dp[${step.i}][${step.w}] = dp[${step.i - 1}][${step.w}] = ${step.best}</b>.
+        `;
+        els.formulaText.textContent = `weight(${item.name}) = ${item.weight} > ${step.w} ⇒ dp[${step.i}][${step.w}] = ${step.skip}`;
+        return;
+      }
+
+      const decisionText = step.decision === "take"
+        ? `Lấy ${escapeHtml(item.name)} tốt hơn vì ${step.take} > ${step.skip}.`
+        : `Không lấy ${escapeHtml(item.name)} tốt hơn hoặc bằng vì ${step.skip} ≥ ${step.take}.`;
+
+      els.explainText.innerHTML = `
+        Đang xét <b>${escapeHtml(item.name)}</b> tại sức chứa <b>w = ${step.w}</b>.
+        Không lấy: <b>${step.skip}</b>. Lấy: <b>${step.take}</b>.
+        ${decisionText}
+        Vì vậy <b>dp[${step.i}][${step.w}] = ${step.best}</b>.
+      `;
+
+      els.formulaText.textContent =
+        `dp[${step.i}][${step.w}] = max(dp[${step.i - 1}][${step.w}], dp[${step.i - 1}][${step.sourceTakeW}] + ${item.value}) = max(${step.skip}, ${step.take}) = ${step.best}`;
+    }
+
+    function updateStats() {
+      const total = steps.length;
+      const pct = total ? Math.round((currentStep / total) * 100) : 0;
+      const snapshot = currentStep > 0 ? steps[currentStep - 1].snapshot : null;
+      const best = snapshot ? snapshot[items.length][capacity] : 0;
+      const selected = snapshot && currentStep === total ? reconstructSelection(snapshot) : [];
+      const selectedWeight = selected.reduce((sum, name) => {
+        const found = items.find(x => x.name === name);
+        return sum + (found ? found.weight : 0);
+      }, 0);
+
+      els.stepStat.textContent = `${currentStep} / ${total}`;
+      els.cellStat.textContent = currentStep > 0
+        ? `dp[${steps[currentStep - 1].i}][${steps[currentStep - 1].w}]`
+        : "—";
+      els.bestStat.textContent = best;
+      els.weightStat.textContent = selectedWeight;
+      els.progress.value = pct;
+      els.progressText.textContent = `${pct}%`;
+
+      els.prevBtn.disabled = currentStep <= 0;
+      els.stepBtn.disabled = currentStep >= total;
+      els.finishBtn.disabled = currentStep >= total;
+      els.clearBtn.disabled = currentStep === 0;
+    }
+
+    function reconstructSelection(snapshot) {
+      const picked = [];
+      let w = capacity;
+
+      for (let i = items.length; i >= 1; i--) {
+        if (snapshot[i][w] !== snapshot[i - 1][w]) {
+          picked.push(items[i - 1].name);
+          w -= items[i - 1].weight;
+        }
+      }
+
+      return picked.reverse();
+    }
+
+    function stepForward() {
+      if (currentStep < steps.length) {
+        showStep(currentStep + 1);
+      } else {
+        stopPlay();
+      }
+    }
+
+    function stepBackward() {
+      if (currentStep > 0) {
+        showStep(currentStep - 1);
+      }
+    }
+
+    function play() {
+      if (isPlaying) {
+        stopPlay();
+        return;
+      }
+
+      if (currentStep >= steps.length) {
+        showStep(0);
+      }
+
+      isPlaying = true;
+      els.playBtn.textContent = "⏸ Tạm dừng";
+      els.playBtn.classList.remove("success");
+      els.playBtn.classList.add("danger");
+
+      timer = setInterval(() => {
+        if (currentStep >= steps.length) {
+          stopPlay();
+          return;
+        }
+        stepForward();
+      }, Number(els.speed.value));
+    }
+
+    function stopPlay() {
+      isPlaying = false;
+      clearInterval(timer);
+      timer = null;
+      els.playBtn.textContent = "▶ Chạy";
+      els.playBtn.classList.add("success");
+      els.playBtn.classList.remove("danger");
+    }
+
+    function finish() {
+      stopPlay();
+      showStep(steps.length);
+    }
+
+    function clearState() {
+      stopPlay();
+      showStep(0);
+    }
+
+    function build() {
+      try {
+        stopPlay();
+        clearError();
+        items = parseItems();
+        capacity = parseCapacity();
+        selectedNames = [];
+        currentStep = 0;
+        computeSteps();
+        renderItems();
+        renderTable();
+        updateStats();
+
+        els.explainText.textContent = "Bảng đã được tạo. Mỗi bước sẽ tính một ô dp[i][w] theo công thức quy hoạch động.";
+        els.formulaText.textContent = "dp[i][w] = max(không lấy vật phẩm i, lấy vật phẩm i nếu đủ sức chứa)";
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function applyExample() {
+      const selected = examples[els.example.value];
+      els.capacity.value = selected.capacity;
+      els.itemsInput.value = selected.items;
+      build();
+    }
+
+    function resetInput() {
+      els.example.value = "default";
+      els.capacity.value = examples.default.capacity;
+      els.itemsInput.value = examples.default.items;
+      build();
+    }
+
+    function updateSpeedText() {
+      els.speedText.textContent = `${els.speed.value} ms/bước`;
+
+      if (isPlaying) {
+        stopPlay();
+        play();
+      }
+    }
+
+    function scrollCellIntoView(i, w) {
+      const cell = document.getElementById(`cell-${i}-${w}`);
+      if (!cell) return;
+      cell.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    els.buildBtn.addEventListener("click", build);
+    els.resetBtn.addEventListener("click", resetInput);
+    els.example.addEventListener("change", applyExample);
+    els.prevBtn.addEventListener("click", stepBackward);
+    els.stepBtn.addEventListener("click", stepForward);
+    els.playBtn.addEventListener("click", play);
+    els.finishBtn.addEventListener("click", finish);
+    els.clearBtn.addEventListener("click", clearState);
+    els.speed.addEventListener("input", updateSpeedText);
+
+    updateSpeedText();
+    build();
+
+    const copyCodeBtn = document.getElementById("copyCodeBtn");
+    const pythonCode = document.getElementById("pythonCode");
+
+    if (copyCodeBtn && pythonCode) {
+      copyCodeBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(pythonCode.textContent);
+          const oldText = copyCodeBtn.textContent;
+          copyCodeBtn.textContent = "Đã copy!";
+          setTimeout(() => copyCodeBtn.textContent = oldText, 1200);
+        } catch {
+          copyCodeBtn.textContent = "Không copy được";
+          setTimeout(() => copyCodeBtn.textContent = "Copy code", 1200);
+        }
+      });
+    }
+
+  </script>
+</body>
+</html>
